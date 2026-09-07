@@ -1151,10 +1151,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
         return json.loads(self.rfile.read(n).decode("utf-8"))
 
     def do_GET(self):
-        if self.path == "/":
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == "/":
             self.send_bytes(200, page().encode("utf-8"), "text/html; charset=utf-8")
             return
-        if self.path == "/api/status":
+        if parsed.path == "/api/status":
             if not self.authed():
                 self.send_json({"ok": False, "error": "unauthorized"}, 401)
                 return
@@ -1165,7 +1166,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_json({"ok": False, "error": str(e)}, 500)
             return
-        if self.path == "/api/logs":
+        if parsed.path == "/api/logs":
             if not self.authed():
                 self.send_json({"ok": False, "error": "unauthorized"}, 401)
                 return
@@ -1174,7 +1175,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_json({"ok": False, "error": str(e)}, 500)
             return
-        if self.path == "/api/connections":
+        if parsed.path == "/api/connections":
             if not self.authed():
                 self.send_json({"ok": False, "error": "unauthorized"}, 401)
                 return
