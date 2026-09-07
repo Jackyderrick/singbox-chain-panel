@@ -13,11 +13,21 @@ services:
       PANEL_PASSWORD: "${PANEL_PASSWORD}"
       PANEL_SECRET: "${PANEL_SECRET}"
       PUBLIC_NODE_HOST: "${PUBLIC_NODE_HOST:-45.8.173.58}"
+      REALITY_PUBLIC_KEY: "${REALITY_PUBLIC_KEY}"
+      DEFAULT_HOME_TAG: "${DEFAULT_HOME_TAG:-home-socks5-out}"
       APP_DIR: "/opt/singbox-panel"
       SINGBOX_CONFIG_PATH: "/etc/sing-box/config.json"
       SINGBOX_MANAGE_MODE: "process"
       SINGBOX_BIN: "/usr/local/bin/sing-box"
       SINGBOX_LOG_PATH: "/opt/singbox-panel/sing-box.log"
+      VLESS_TAG: "${VLESS_TAG:-vless-reality-in}"
+      DEFAULT_VLESS_FLOW: "${DEFAULT_VLESS_FLOW:-xtls-rprx-vision}"
+      CLASH_API_ADDR: "${CLASH_API_ADDR:-127.0.0.1:9090}"
+      SOCKS_OUT_PREFIX: "${SOCKS_OUT_PREFIX:-home-socks5-}"
+      CUSTOMER_OUT_PREFIX: "${CUSTOMER_OUT_PREFIX:-customer-route-}"
+      ONLINE_WINDOW_SECONDS: "${ONLINE_WINDOW_SECONDS:-600}"
+      TRAFFIC_POLL_SECONDS: "${TRAFFIC_POLL_SECONDS:-5}"
+      EXPIRE_CHECK_SECONDS: "${EXPIRE_CHECK_SECONDS:-60}"
     volumes:
       - ./config.json:/etc/sing-box/config.json
       - singbox-panel-data:/opt/singbox-panel

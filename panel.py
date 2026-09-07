@@ -33,16 +33,20 @@ SINGBOX_BIN = os.environ.get("SINGBOX_BIN", "sing-box")
 SINGBOX_MANAGE_MODE = os.environ.get("SINGBOX_MANAGE_MODE", "systemd")
 SINGBOX_SERVICE = os.environ.get("SINGBOX_SERVICE", "sing-box")
 SINGBOX_LOG_PATH = os.environ.get("SINGBOX_LOG_PATH", os.path.join(APP_DIR, "sing-box.log"))
-VLESS_TAG = "vless-reality-in"
-SOCKS_OUT_PREFIX = "home-socks5-"
-CUSTOMER_OUT_PREFIX = "customer-route-"
-ONLINE_WINDOW_SECONDS = 600
-CLASH_API_ADDR = "127.0.0.1:9090"
-TRAFFIC_POLL_SECONDS = 5
-EXPIRE_CHECK_SECONDS = 60
+VLESS_TAG = os.environ.get("VLESS_TAG", "vless-reality-in")
+DEFAULT_VLESS_FLOW = os.environ.get("DEFAULT_VLESS_FLOW", "xtls-rprx-vision")
+SOCKS_OUT_PREFIX = os.environ.get("SOCKS_OUT_PREFIX", "home-socks5-")
+CUSTOMER_OUT_PREFIX = os.environ.get("CUSTOMER_OUT_PREFIX", "customer-route-")
+ONLINE_WINDOW_SECONDS = int(os.environ.get("ONLINE_WINDOW_SECONDS", "600"))
+CLASH_API_ADDR = os.environ.get("CLASH_API_ADDR", "127.0.0.1:9090")
+TRAFFIC_POLL_SECONDS = int(os.environ.get("TRAFFIC_POLL_SECONDS", "5"))
+EXPIRE_CHECK_SECONDS = int(os.environ.get("EXPIRE_CHECK_SECONDS", "60"))
 PUBLIC_NODE_HOST = os.environ.get("PUBLIC_NODE_HOST", "45.8.173.58")
+REALITY_PUBLIC_KEY = os.environ.get("REALITY_PUBLIC_KEY", "")
+DEFAULT_HOME_TAG = os.environ.get("DEFAULT_HOME_TAG", "home-socks5-out")
 SINGBOX_PROCESS = None
 SINGBOX_PROCESS_LOCK = threading.Lock()
+STATE_LOCK = threading.RLock()
 
 
 class PanelError(Exception):
@@ -155,6 +159,14 @@ def save_json(path, data):
             os.unlink(tmp)
 
 
+def state_transaction(func):
+    def wrapped(*args, **kwargs):
+        with STATE_LOCK:
+            return func(*args, **kwargs)
+    return wrapped
+
+
+@state_transaction
 def init_state():
     state = load_json(STATE_PATH, {})
     changed = False
@@ -168,7 +180,7 @@ def init_state():
         state["homes"] = {}
         changed = True
     if "active_home" not in state:
-        state["active_home"] = "home-socks5-out"
+        state["active_home"] = DEFAULT_HOME_TAG
         changed = True
     if changed:
         save_json(STATE_PATH, state)
@@ -237,6 +249,7 @@ def slug(text):
     return value or "home"
 
 
+@state_transaction
 def ensure_state_from_config():
     state = init_state()
     cfg = read_config()
@@ -244,7 +257,7 @@ def ensure_state_from_config():
     if "default" not in state["customers"]:
         state["customers"]["default"] = {
             "name": "默认客户",
-            "home_tag": cfg.get("route", {}).get("final") or state.get("active_home") or "home-socks5-out",
+            "home_tag": cfg.get("route", {}).get("final") or state.get("active_home") or DEFAULT_HOME_TAG,
             "device_limit": 0,
             "limit_action": "alert",
             "default_days": 30,
@@ -565,9 +578,9 @@ def reality_params(cfg):
         short_id = sid[0]
     elif isinstance(sid, str):
         short_id = sid
-    pubkey = load_json(os.path.join(APP_DIR, "reality-public-key.json"), {}).get("public_key", "")
+    pubkey = REALITY_PUBLIC_KEY or load_json(os.path.join(APP_DIR, "reality-public-key.json"), {}).get("public_key", "")
     if not pubkey:
-        pubkey = "4WaYPT7rGdsskW9VegPo4ngZx5UHCqTEjF-Tv97ThV0"
+        raise PanelError("REALITY_PUBLIC_KEY is required to generate VLESS links")
     port = inbound.get("listen_port", 443)
     return server_name, short_id, pubkey, port
 
@@ -580,7 +593,7 @@ def make_vless_link(uid, cfg):
     sni, sid, pubkey, port = reality_params(cfg)
     q = {
         "encryption": "none",
-        "flow": "xtls-rprx-vision",
+        "flow": DEFAULT_VLESS_FLOW,
         "security": "reality",
         "sni": sni,
         "fp": "chrome",
@@ -603,6 +616,7 @@ def make_vless_link_for_first_user(state, cfg):
     return devices[0]["link"] if devices else ""
 
 
+@state_transaction
 def add_device(data):
     name = (data.get("name") or "New Device").strip()[:64]
     customer_id = data.get("customer_id") or "default"
@@ -617,7 +631,7 @@ def add_device(data):
     expires_at = now_ts() + days * 86400 if days > 0 else 0
     cfg = read_config()
     inbound = get_vless_inbound(cfg)
-    inbound.setdefault("users", []).append({"uuid": uid, "name": uid, "flow": "xtls-rprx-vision"})
+    inbound.setdefault("users", []).append({"uuid": uid, "name": uid, "flow": DEFAULT_VLESS_FLOW})
     state["devices"][uid] = {
         "name": name,
         "customer_id": customer_id,
@@ -634,6 +648,7 @@ def add_device(data):
     return {"ok": True, "uuid": uid, "link": make_vless_link(uid, cfg)}
 
 
+@state_transaction
 def set_device(data):
     uid = data.get("uuid", "")
     if not uid:
@@ -669,7 +684,7 @@ def set_device(data):
             users.append({
                 "uuid": uid,
                 "name": uid,
-                "flow": "xtls-rprx-vision"
+                "flow": DEFAULT_VLESS_FLOW
             })
         inbound["users"] = users
         cfg = rebuild_customer_routes(cfg, state)
@@ -678,6 +693,7 @@ def set_device(data):
     return {"ok": True}
 
 
+@state_transaction
 def delete_device(data):
     uid = data.get("uuid", "")
     state = ensure_state_from_config()
@@ -692,9 +708,10 @@ def delete_device(data):
     return {"ok": True}
 
 
+@state_transaction
 def add_customer(data):
     name = (data.get("name") or "客户").strip()[:48]
-    home_tag = data.get("home_tag") or "home-socks5-out"
+    home_tag = data.get("home_tag") or DEFAULT_HOME_TAG
     quota = float(data.get("quota_gb") or 0)
     state = ensure_state_from_config()
     cfg = read_config()
@@ -719,6 +736,7 @@ def add_customer(data):
     return {"ok": True, "id": customer_id}
 
 
+@state_transaction
 def set_customer(data):
     customer_id = data.get("id", "")
     state = ensure_state_from_config()
@@ -754,6 +772,7 @@ def set_customer(data):
     return {"ok": True}
 
 
+@state_transaction
 def delete_customer(data):
     customer_id = data.get("id", "")
     if customer_id == "default":
@@ -768,6 +787,7 @@ def delete_customer(data):
     return {"ok": True}
 
 
+@state_transaction
 def add_home(data):
     name = (data.get("name") or "Home").strip()[:48]
     server = (data.get("server") or "").strip()
@@ -803,6 +823,7 @@ def add_home(data):
     return {"ok": True, "tag": tag}
 
 
+@state_transaction
 def set_active_home(data):
     tag = data.get("tag", "")
     state = ensure_state_from_config()
@@ -821,6 +842,7 @@ def set_active_home(data):
     return {"ok": True}
 
 
+@state_transaction
 def delete_home(data):
     tag = data.get("tag", "")
     state = ensure_state_from_config()
@@ -864,6 +886,7 @@ FLOW_RE = re.compile(r"\[(\d+)\s+[^\]]+\].*inbound/vless\[" + re.escape(VLESS_TA
 OUT_RE = re.compile(r"\[(\d+)\s+[^\]]+\].*outbound/[^[]+\[(" + re.escape(CUSTOMER_OUT_PREFIX) + r"[^]]+)\]: outbound connection")
 
 
+@state_transaction
 def disable_customer(customer_id):
     state = ensure_state_from_config()
     cfg = read_config()
@@ -883,6 +906,7 @@ def disable_customer(customer_id):
         save_json(STATE_PATH, state)
 
 
+@state_transaction
 def record_customer_ip(customer_id, source_ip):
     state = ensure_state_from_config()
     customer = state.get("customers", {}).get(customer_id)
@@ -948,30 +972,31 @@ def poll_connection_traffic():
         try:
             data = clash_connections_raw()
             rows = normalize_connections(data)
-            state = ensure_state_from_config()
-            seen = set()
-            changed = False
-            for row in rows:
-                cid = row.get("id")
-                uid = row.get("auth_user", "")
-                if not cid:
-                    continue
-                seen.add(cid)
-                cur_up = int(row.get("upload", 0) or 0)
-                cur_down = int(row.get("download", 0) or 0)
-                prev_up, prev_down = last.get(cid, (cur_up, cur_down))
-                delta_up = max(0, cur_up - prev_up)
-                delta_down = max(0, cur_down - prev_down)
-                last[cid] = (cur_up, cur_down)
-                if uid in state.get("devices", {}) and (delta_up or delta_down):
-                    dev = state["devices"][uid]
-                    dev["upload_bytes"] = int(dev.get("upload_bytes", 0) or 0) + delta_up
-                    dev["download_bytes"] = int(dev.get("download_bytes", 0) or 0) + delta_down
-                    dev["used_bytes"] = int(dev.get("upload_bytes", 0) or 0) + int(dev.get("download_bytes", 0) or 0)
-                    changed = True
-            last = {cid: val for cid, val in last.items() if cid in seen}
-            if changed:
-                save_json(STATE_PATH, state)
+            with STATE_LOCK:
+                state = ensure_state_from_config()
+                seen = set()
+                changed = False
+                for row in rows:
+                    cid = row.get("id")
+                    uid = row.get("auth_user", "")
+                    if not cid:
+                        continue
+                    seen.add(cid)
+                    cur_up = int(row.get("upload", 0) or 0)
+                    cur_down = int(row.get("download", 0) or 0)
+                    prev_up, prev_down = last.get(cid, (cur_up, cur_down))
+                    delta_up = max(0, cur_up - prev_up)
+                    delta_down = max(0, cur_down - prev_down)
+                    last[cid] = (cur_up, cur_down)
+                    if uid in state.get("devices", {}) and (delta_up or delta_down):
+                        dev = state["devices"][uid]
+                        dev["upload_bytes"] = int(dev.get("upload_bytes", 0) or 0) + delta_up
+                        dev["download_bytes"] = int(dev.get("download_bytes", 0) or 0) + delta_down
+                        dev["used_bytes"] = int(dev.get("upload_bytes", 0) or 0) + int(dev.get("download_bytes", 0) or 0)
+                        changed = True
+                last = {cid: val for cid, val in last.items() if cid in seen}
+                if changed:
+                    save_json(STATE_PATH, state)
         except Exception:
             pass
         time.sleep(TRAFFIC_POLL_SECONDS)
@@ -980,34 +1005,36 @@ def poll_connection_traffic():
 def expire_devices_loop():
     while True:
         try:
-            state = ensure_state_from_config()
-            expired_any = False
-            ts = now_ts()
-            for dev in state.get("devices", {}).values():
-                if dev.get("enabled", True) and dev.get("expires_at") and int(dev.get("expires_at")) <= ts:
-                    dev["enabled"] = False
-                    expired_any = True
-            if expired_any:
-                cfg = read_config()
-                inbound = get_vless_inbound(cfg)
-                active = []
-                for u in inbound.get("users", []):
-                    uid = u.get("uuid")
-                    dev = state.get("devices", {}).get(uid)
-                    if dev and dev.get("enabled", True) and not (dev.get("expires_at") and int(dev.get("expires_at")) <= ts):
-                        u["name"] = uid
-                        if "flow" not in u:
-                            u["flow"] = "xtls-rprx-vision"
-                        active.append(u)
-                inbound["users"] = active
-                cfg = rebuild_customer_routes(cfg, state)
-                atomic_write_config(cfg)
-                save_json(STATE_PATH, state)
+            with STATE_LOCK:
+                state = ensure_state_from_config()
+                expired_any = False
+                ts = now_ts()
+                for dev in state.get("devices", {}).values():
+                    if dev.get("enabled", True) and dev.get("expires_at") and int(dev.get("expires_at")) <= ts:
+                        dev["enabled"] = False
+                        expired_any = True
+                if expired_any:
+                    cfg = read_config()
+                    inbound = get_vless_inbound(cfg)
+                    active = []
+                    for u in inbound.get("users", []):
+                        uid = u.get("uuid")
+                        dev = state.get("devices", {}).get(uid)
+                        if dev and dev.get("enabled", True) and not (dev.get("expires_at") and int(dev.get("expires_at")) <= ts):
+                            u["name"] = uid
+                            if "flow" not in u:
+                                u["flow"] = DEFAULT_VLESS_FLOW
+                            active.append(u)
+                    inbound["users"] = active
+                    cfg = rebuild_customer_routes(cfg, state)
+                    atomic_write_config(cfg)
+                    save_json(STATE_PATH, state)
         except Exception:
             pass
         time.sleep(EXPIRE_CHECK_SECONDS)
 
 
+@state_transaction
 def migrate_config_for_customers():
     state = ensure_state_from_config()
     cfg = read_config()
@@ -1024,7 +1051,7 @@ def migrate_config_for_customers():
         if uid:
             user["name"] = uid
             if "flow" not in user:
-                user["flow"] = "xtls-rprx-vision"
+                user["flow"] = DEFAULT_VLESS_FLOW
             dev = state.get("devices", {}).get(uid, {})
             expired = bool(dev.get("expires_at") and int(dev.get("expires_at")) <= now_ts())
             if dev.get("enabled", True) and not expired:

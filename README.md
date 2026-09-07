@@ -536,12 +536,22 @@ journalctl -u sing-box -n 100 --no-pager
 | `PANEL_PASSWORD` | 是 | 空 | 登录面板密码 | `change-me` |
 | `PANEL_SECRET` | 是 | 空 | Cookie 签名密钥和 Clash API secret 派生源 | `random-url-safe-secret` |
 | `PUBLIC_NODE_HOST` | 否 | `45.8.173.58` | 生成 VLESS 链接时使用的主机名 | `node.example.com` |
+| `REALITY_PUBLIC_KEY` | 条件必填 | 空 | 生成 VLESS Reality 链接使用的公钥；未设置时读取 `/opt/singbox-panel/reality-public-key.json` | `PUBLIC_KEY_VALUE` |
+| `DEFAULT_HOME_TAG` | 否 | `home-socks5-out` | 初始默认家宽 SOCKS5 出站 tag | `home-socks5-out` |
 | `APP_DIR` | 否 | `/opt/singbox-panel` | 状态、备份、日志目录 | `/opt/singbox-panel` |
 | `SINGBOX_CONFIG_PATH` | 否 | `/etc/sing-box/config.json` | 被面板管理的 `sing-box` 配置文件 | `/etc/sing-box/config.json` |
 | `SINGBOX_BIN` | 否 | `sing-box` | `sing-box` 可执行文件路径 | `/usr/local/bin/sing-box` |
 | `SINGBOX_MANAGE_MODE` | 否 | `systemd` | `systemd` 使用系统服务管理；`process` 使用 `subprocess.Popen` 管理 | `process` |
 | `SINGBOX_SERVICE` | 否 | `sing-box` | systemd 模式下的服务名 | `sing-box` |
 | `SINGBOX_LOG_PATH` | 否 | `/opt/singbox-panel/sing-box.log` | process 模式下的 `sing-box` 日志文件 | `/opt/singbox-panel/sing-box.log` |
+| `VLESS_TAG` | 否 | `vless-reality-in` | 被管理的 VLESS 入站 tag | `vless-reality-in` |
+| `DEFAULT_VLESS_FLOW` | 否 | `xtls-rprx-vision` | 新建设备和生成链接时使用的 VLESS flow | `xtls-rprx-vision` |
+| `CLASH_API_ADDR` | 否 | `127.0.0.1:9090` | 本地 Clash API 地址 | `127.0.0.1:9090` |
+| `SOCKS_OUT_PREFIX` | 否 | `home-socks5-` | 家宽 SOCKS5 出站 tag 前缀 | `home-socks5-` |
+| `CUSTOMER_OUT_PREFIX` | 否 | `customer-route-` | 客户内部出站 tag 前缀 | `customer-route-` |
+| `ONLINE_WINDOW_SECONDS` | 否 | `600` | 来源 IP 观察窗口秒数 | `600` |
+| `TRAFFIC_POLL_SECONDS` | 否 | `5` | 连接流量轮询间隔秒数 | `5` |
+| `EXPIRE_CHECK_SECONDS` | 否 | `60` | 链接过期检查间隔秒数 | `60` |
 
 ### 源码常量
 
