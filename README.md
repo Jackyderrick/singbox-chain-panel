@@ -42,6 +42,25 @@
 - 不提供 HTTPS 证书申请；可由 Nginx、Cloudflare 或其他反代层完成。
 - 不保证兼容所有 `sing-box` 版本；当前实现依据已读源码和一次部署环境验证。
 
+### 分支与演进方向
+
+| 分支 | 定位 | 说明 |
+| --- | --- | --- |
+| `main` | 单机稳定版 | 当前可部署版本，面板、状态文件、前端模板、后台线程仍在 `panel.py` 内 |
+| `codex/cf-distributed-panel-design` | Cloudflare 分布式面板设计分支 | 讨论 `Cloudflare Worker + D1 + VPS Agent` 的 Master/Node 架构，不影响当前线上单机版 |
+
+Cloudflare 分布式面板的设计文档位于设计分支：
+
+```text
+docs/cf-distributed-panel-architecture.md
+```
+
+推荐迁移方向：
+
+- 第一阶段保留 `main` 的单机部署，继续用于当前服务器。
+- 第二阶段从设计分支启动新目录：`worker/` 承载 Cloudflare Worker API，`agent/` 承载 VPS Python Agent。
+- 第三阶段让 Agent 主动向 Worker 心跳、上报流量、拉取配置，逐步替代单机 Web 面板中的远程管理逻辑。
+
 ## 2. 技术栈与运行环境
 
 ### 已读到的项目技术栈
