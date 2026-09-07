@@ -1044,6 +1044,8 @@ curl -s \
 | 页面弹出 `Unexpected end of JSON input` | 旧版本前端解析空响应 | 前端直接调用 `response.json()` | 使用当前版本；当前版本先读取文本再解析 |
 | `Cannot read properties of undefined (reading 'writeText')` | HTTP 页面点复制 | 浏览器禁止 Clipboard API 或不支持 | 当前版本 fallback 到 `prompt` 手动复制 |
 | 节点域名不可用 | Cloudflare `node` 记录开了代理 | VLESS Reality 不是普通 HTTPS | 将 `node.example.com` 改为 DNS only |
+| Cloudflare `522` | 访问 `panel.example.com` | Cloudflare 到源站超时，常见于源站关机、CPU 被平台限制、Nginx 无响应 | 先确认服务器开机，再查 `systemctl status nginx singbox-panel sing-box` |
+| 页面弹出 `Failed to fetch` | 面板自动刷新连接时 | `/api/connections` 请求被网络中断或源站超时 | 当前版本自动轮询失败不弹窗，只在连接状态文字中提示 |
 | 面板域名打不开 | Nginx 或 DNS 未生效 | 80 端口未监听或 DNS 未解析 | 执行 `nginx -t`、`systemctl status nginx`、检查 DNS |
 | 设备流量不增长 | 没有活跃连接或 Clash API 未启动 | `/connections` 取不到数据 | 检查 `ss -lntp | grep 9090` 和 `/api/connections` |
 
