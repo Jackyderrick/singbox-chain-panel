@@ -21,14 +21,18 @@ import urllib.parse
 import urllib.request
 import uuid
 
-APP_DIR = "/opt/singbox-panel"
+APP_DIR = os.environ.get("APP_DIR", "/opt/singbox-panel")
 STATE_PATH = os.path.join(APP_DIR, "state.json")
-CONFIG_PATH = "/etc/sing-box/config.json"
+CONFIG_PATH = os.environ.get("SINGBOX_CONFIG_PATH", "/etc/sing-box/config.json")
 BACKUP_DIR = os.path.join(APP_DIR, "backups")
 HOST = os.environ.get("PANEL_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PANEL_PORT", "8080"))
 ADMIN_PASSWORD = os.environ.get("PANEL_PASSWORD", "")
 SECRET = os.environ.get("PANEL_SECRET", "")
+SINGBOX_BIN = os.environ.get("SINGBOX_BIN", "sing-box")
+SINGBOX_MANAGE_MODE = os.environ.get("SINGBOX_MANAGE_MODE", "systemd")
+SINGBOX_SERVICE = os.environ.get("SINGBOX_SERVICE", "sing-box")
+SINGBOX_LOG_PATH = os.environ.get("SINGBOX_LOG_PATH", os.path.join(APP_DIR, "sing-box.log"))
 VLESS_TAG = "vless-reality-in"
 SOCKS_OUT_PREFIX = "home-socks5-"
 CUSTOMER_OUT_PREFIX = "customer-route-"
@@ -37,6 +41,8 @@ CLASH_API_ADDR = "127.0.0.1:9090"
 TRAFFIC_POLL_SECONDS = 5
 EXPIRE_CHECK_SECONDS = 60
 PUBLIC_NODE_HOST = os.environ.get("PUBLIC_NODE_HOST", "45.8.173.58")
+SINGBOX_PROCESS = None
+SINGBOX_PROCESS_LOCK = threading.Lock()
 
 
 class PanelError(Exception):
@@ -54,6 +60,77 @@ def run(cmd, timeout=20):
     if p.returncode != 0:
         raise PanelError((err or out or "command failed").strip())
     return out
+
+
+def singbox_cmd(*args):
+    return [SINGBOX_BIN] + list(args)
+
+
+def check_singbox_config(path):
+    check = subprocess.run(singbox_cmd("check", "-c", path), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if check.returncode != 0:
+        msg = check.stderr.decode("utf-8", "replace") or check.stdout.decode("utf-8", "replace")
+        raise PanelError("sing-box check failed: " + msg.strip())
+
+
+def ensure_process_singbox_started():
+    global SINGBOX_PROCESS
+    if SINGBOX_MANAGE_MODE != "process":
+        return
+    with SINGBOX_PROCESS_LOCK:
+        if SINGBOX_PROCESS is not None and SINGBOX_PROCESS.poll() is None:
+            return
+        os.makedirs(os.path.dirname(SINGBOX_LOG_PATH), exist_ok=True)
+        log = open(SINGBOX_LOG_PATH, "ab", buffering=0)
+        SINGBOX_PROCESS = subprocess.Popen(
+            singbox_cmd("run", "-c", CONFIG_PATH),
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            close_fds=True
+        )
+
+
+def stop_process_singbox():
+    global SINGBOX_PROCESS
+    with SINGBOX_PROCESS_LOCK:
+        if SINGBOX_PROCESS is None or SINGBOX_PROCESS.poll() is not None:
+            SINGBOX_PROCESS = None
+            return
+        SINGBOX_PROCESS.terminate()
+        try:
+            SINGBOX_PROCESS.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            SINGBOX_PROCESS.kill()
+            SINGBOX_PROCESS.wait(timeout=5)
+        SINGBOX_PROCESS = None
+
+
+def restart_singbox():
+    check_singbox_config(CONFIG_PATH)
+    if SINGBOX_MANAGE_MODE == "process":
+        stop_process_singbox()
+        ensure_process_singbox_started()
+    else:
+        run(["systemctl", "restart", SINGBOX_SERVICE], timeout=30)
+
+
+def singbox_status():
+    if SINGBOX_MANAGE_MODE == "process":
+        ensure_process_singbox_started()
+        return "active" if SINGBOX_PROCESS is not None and SINGBOX_PROCESS.poll() is None else "inactive"
+    active = subprocess.run(["systemctl", "is-active", SINGBOX_SERVICE], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return active.stdout.decode("utf-8", "replace").strip()
+
+
+def read_singbox_logs(lines=120):
+    if SINGBOX_MANAGE_MODE == "process":
+        if not os.path.exists(SINGBOX_LOG_PATH):
+            return ""
+        with open(SINGBOX_LOG_PATH, "rb") as f:
+            data = f.read()
+        text = data.decode("utf-8", "replace").splitlines()
+        return "\n".join(text[-lines:])
+    return run(["journalctl", "-u", SINGBOX_SERVICE, "-n", str(lines), "--no-pager"], timeout=10)
 
 
 def load_json(path, default):
@@ -118,12 +195,9 @@ def atomic_write_config(cfg):
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
             f.write("\n")
-        check = subprocess.run(["sing-box", "check", "-c", tmp], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if check.returncode != 0:
-            msg = check.stderr.decode("utf-8", "replace") or check.stdout.decode("utf-8", "replace")
-            raise PanelError("sing-box check failed: " + msg.strip())
+        check_singbox_config(tmp)
         os.replace(tmp, CONFIG_PATH)
-        run(["systemctl", "restart", "sing-box"], timeout=30)
+        restart_singbox()
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
@@ -317,10 +391,9 @@ def clash_secret():
 def status_payload():
     state = ensure_state_from_config()
     cfg = read_config()
-    active = subprocess.run(["systemctl", "is-active", "sing-box"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     listening = run(["ss", "-lntp"], timeout=10)
     return {
-        "service": active.stdout.decode("utf-8", "replace").strip(),
+        "service": singbox_status(),
         "customers": list_customers(state, cfg),
         "devices": list_devices(state, cfg),
         "homes": list_homes(state, cfg),
@@ -779,12 +852,11 @@ def test_home(data):
 
 
 def logs():
-    return run(["journalctl", "-u", "sing-box", "-n", "120", "--no-pager"], timeout=10)
+    return read_singbox_logs(120)
 
 
 def restart_service():
-    run(["sing-box", "check", "-c", CONFIG_PATH], timeout=15)
-    run(["systemctl", "restart", "sing-box"], timeout=30)
+    restart_singbox()
     return {"ok": True}
 
 
@@ -830,28 +902,44 @@ def monitor_singbox_logs():
     pending = {}
     while True:
         try:
-            p = subprocess.Popen(
-                ["journalctl", "-u", "sing-box", "-f", "-n", "0", "--no-pager"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL
-            )
-            for raw in iter(p.stdout.readline, b""):
-                line = raw.decode("utf-8", "replace")
-                m = FLOW_RE.search(line)
-                if m:
-                    pending[m.group(1)] = (m.group(2), now_ts())
-                    continue
-                m = OUT_RE.search(line)
-                if m:
-                    flow_id = m.group(1)
-                    out_tag = m.group(2)
-                    source = pending.pop(flow_id, (None, 0))[0]
-                    if source and out_tag.startswith(CUSTOMER_OUT_PREFIX):
-                        record_customer_ip(out_tag[len(CUSTOMER_OUT_PREFIX):], source)
-                cutoff = now_ts() - 60
-                pending = {k: v for k, v in pending.items() if v[1] >= cutoff}
+            if SINGBOX_MANAGE_MODE == "process":
+                ensure_process_singbox_started()
+                os.makedirs(os.path.dirname(SINGBOX_LOG_PATH), exist_ok=True)
+                open(SINGBOX_LOG_PATH, "ab").close()
+                with open(SINGBOX_LOG_PATH, "rb") as f:
+                    f.seek(0, os.SEEK_END)
+                    while True:
+                        raw = f.readline()
+                        if not raw:
+                            time.sleep(1)
+                            continue
+                        pending = consume_singbox_log_line(raw.decode("utf-8", "replace"), pending)
+            else:
+                p = subprocess.Popen(
+                    ["journalctl", "-u", SINGBOX_SERVICE, "-f", "-n", "0", "--no-pager"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL
+                )
+                for raw in iter(p.stdout.readline, b""):
+                    pending = consume_singbox_log_line(raw.decode("utf-8", "replace"), pending)
         except Exception:
             time.sleep(3)
+
+
+def consume_singbox_log_line(line, pending):
+    m = FLOW_RE.search(line)
+    if m:
+        pending[m.group(1)] = (m.group(2), now_ts())
+        return pending
+    m = OUT_RE.search(line)
+    if m:
+        flow_id = m.group(1)
+        out_tag = m.group(2)
+        source = pending.pop(flow_id, (None, 0))[0]
+        if source and out_tag.startswith(CUSTOMER_OUT_PREFIX):
+            record_customer_ip(out_tag[len(CUSTOMER_OUT_PREFIX):], source)
+    cutoff = now_ts() - 60
+    return {k: v for k, v in pending.items() if v[1] >= cutoff}
 
 
 def poll_connection_traffic():
@@ -1149,6 +1237,7 @@ def main():
     os.makedirs(APP_DIR, exist_ok=True)
     os.makedirs(BACKUP_DIR, exist_ok=True)
     migrate_config_for_customers()
+    ensure_process_singbox_started()
     threading.Thread(target=monitor_singbox_logs, daemon=True).start()
     threading.Thread(target=poll_connection_traffic, daemon=True).start()
     threading.Thread(target=expire_devices_loop, daemon=True).start()

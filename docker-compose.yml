@@ -1,0 +1,26 @@
+services:
+  singbox-panel:
+    build:
+      context: .
+      args:
+        SING_BOX_VERSION: "1.14.0"
+    container_name: singbox-panel
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      PANEL_HOST: "0.0.0.0"
+      PANEL_PORT: "8080"
+      PANEL_PASSWORD: "${PANEL_PASSWORD}"
+      PANEL_SECRET: "${PANEL_SECRET}"
+      PUBLIC_NODE_HOST: "${PUBLIC_NODE_HOST:-45.8.173.58}"
+      APP_DIR: "/opt/singbox-panel"
+      SINGBOX_CONFIG_PATH: "/etc/sing-box/config.json"
+      SINGBOX_MANAGE_MODE: "process"
+      SINGBOX_BIN: "/usr/local/bin/sing-box"
+      SINGBOX_LOG_PATH: "/opt/singbox-panel/sing-box.log"
+    volumes:
+      - ./config.json:/etc/sing-box/config.json
+      - singbox-panel-data:/opt/singbox-panel
+
+volumes:
+  singbox-panel-data:

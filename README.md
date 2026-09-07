@@ -98,8 +98,11 @@
 
 ```text
 .
+├── .env.example
 ├── .gitignore
+├── Dockerfile
 ├── README.md
+├── docker-compose.yml
 └── panel.py
 ```
 
@@ -109,6 +112,9 @@
 | --- | --- |
 | `panel.py` | Web 服务、API、HTML 页面、状态文件管理、`sing-box` 配置修改、后台线程全部在此文件内 |
 | `.gitignore` | 忽略 Python 缓存、环境变量文件、调试导出文件 |
+| `.env.example` | Docker Compose 和进程模式所需环境变量模板 |
+| `Dockerfile` | 构建容器镜像，安装 Python 3.11 slim 和 sing-box 1.14.0 |
+| `docker-compose.yml` | 以 `SINGBOX_MANAGE_MODE=process` 启动面板和 sing-box |
 | `README.md` | 给 AI 和维护者的安装、运行、接口、数据结构说明 |
 
 ### 调用链
@@ -409,6 +415,84 @@ sudo systemctl restart singbox-panel
 sudo systemctl status singbox-panel --no-pager -l
 ```
 
+### 进程托管模式
+
+进程托管模式用于容器化或没有 systemd 的环境。面板会通过 `subprocess.Popen` 启动：
+
+```bash
+sing-box run -c /etc/sing-box/config.json
+```
+
+在仓库根目录执行：
+
+```bash
+PANEL_HOST=0.0.0.0 \
+PANEL_PORT=8080 \
+PANEL_PASSWORD=dev-password \
+PANEL_SECRET=dev-secret-change-me \
+PUBLIC_NODE_HOST=node.example.com \
+APP_DIR=/opt/singbox-panel \
+SINGBOX_CONFIG_PATH=/etc/sing-box/config.json \
+SINGBOX_MANAGE_MODE=process \
+SINGBOX_BIN=sing-box \
+SINGBOX_LOG_PATH=/opt/singbox-panel/sing-box.log \
+python3 panel.py
+```
+
+进程托管模式的行为：
+
+- 面板启动时会启动 `sing-box run -c SINGBOX_CONFIG_PATH`。
+- 面板重启 `sing-box` 时会先终止旧进程，再启动新进程。
+- `sing-box` 标准输出和错误输出写入 `SINGBOX_LOG_PATH`。
+- 面板日志查看和在线 IP 检测从 `SINGBOX_LOG_PATH` 读取。
+- 不调用 `systemctl` 或 `journalctl` 管理 `sing-box`。
+
+### Docker Compose
+
+在仓库根目录执行：
+
+```bash
+cp .env.example .env
+python3 - <<'PY'
+import secrets
+print("PANEL_SECRET=" + secrets.token_urlsafe(32))
+PY
+```
+
+编辑 `.env`，设置：
+
+```text
+PANEL_PASSWORD=change-this-password
+PANEL_SECRET=replace-with-generated-secret
+PUBLIC_NODE_HOST=node.example.com
+APP_DIR=/opt/singbox-panel
+SINGBOX_CONFIG_PATH=/etc/sing-box/config.json
+SINGBOX_MANAGE_MODE=process
+SINGBOX_BIN=/usr/local/bin/sing-box
+SINGBOX_LOG_PATH=/opt/singbox-panel/sing-box.log
+```
+
+把可用的 `sing-box` 配置放到仓库根目录：
+
+```bash
+cp /etc/sing-box/config.json ./config.json
+```
+
+启动：
+
+```bash
+docker compose up -d --build
+docker compose logs -f singbox-panel
+```
+
+验证：
+
+```bash
+curl -i http://127.0.0.1:8080/
+```
+
+Docker Compose 使用 `network_mode: host`。在 Linux 主机上，容器内 `sing-box` 可以直接监听宿主机端口。Docker Desktop、macOS、Windows 的 host network 行为【需人工验证】。
+
 ### 配置校验
 
 在仓库根目录执行：
@@ -452,6 +536,12 @@ journalctl -u sing-box -n 100 --no-pager
 | `PANEL_PASSWORD` | 是 | 空 | 登录面板密码 | `change-me` |
 | `PANEL_SECRET` | 是 | 空 | Cookie 签名密钥和 Clash API secret 派生源 | `random-url-safe-secret` |
 | `PUBLIC_NODE_HOST` | 否 | `45.8.173.58` | 生成 VLESS 链接时使用的主机名 | `node.example.com` |
+| `APP_DIR` | 否 | `/opt/singbox-panel` | 状态、备份、日志目录 | `/opt/singbox-panel` |
+| `SINGBOX_CONFIG_PATH` | 否 | `/etc/sing-box/config.json` | 被面板管理的 `sing-box` 配置文件 | `/etc/sing-box/config.json` |
+| `SINGBOX_BIN` | 否 | `sing-box` | `sing-box` 可执行文件路径 | `/usr/local/bin/sing-box` |
+| `SINGBOX_MANAGE_MODE` | 否 | `systemd` | `systemd` 使用系统服务管理；`process` 使用 `subprocess.Popen` 管理 | `process` |
+| `SINGBOX_SERVICE` | 否 | `sing-box` | systemd 模式下的服务名 | `sing-box` |
+| `SINGBOX_LOG_PATH` | 否 | `/opt/singbox-panel/sing-box.log` | process 模式下的 `sing-box` 日志文件 | `/opt/singbox-panel/sing-box.log` |
 
 ### 源码常量
 
@@ -955,6 +1045,7 @@ curl -i http://127.0.0.1:8080/
 | --- | --- |
 | `systemctl restart sing-box` | 会断开已有代理连接 |
 | `systemctl restart singbox-panel` | 会中断面板请求，后台流量轮询状态会重置 |
+| process 模式下调用 `/api/restart` | 会终止并重启面板托管的 `sing-box` 子进程 |
 | 添加/删除设备 | 会修改 `/etc/sing-box/config.json` 并重启 `sing-box` |
 | 添加/删除家宽出口 | 会修改 `/etc/sing-box/config.json` 并重启 `sing-box` |
 | 切换客户出口 | 会修改路由规则并重启 `sing-box` |
@@ -1005,6 +1096,13 @@ ss -lntp | grep ':9090'
 
 ```bash
 curl -i http://127.0.0.1:8080/
+```
+
+process 模式下还应检查：
+
+```bash
+test -f /opt/singbox-panel/sing-box.log
+tail -n 50 /opt/singbox-panel/sing-box.log
 ```
 
 检查 Nginx 反代：
