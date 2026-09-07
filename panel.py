@@ -460,9 +460,18 @@ def clash_connections_raw():
         return json.loads(resp.read().decode("utf-8", "replace"))
 
 
+UUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+
+
 def extract_auth_user(rule):
-    m = re.search(r"auth_user=([^ ]+)", rule or "")
-    return m.group(1) if m else ""
+    m = re.search(r"auth_user=(\[[^\]]+\]|[^ ]+)", rule or "")
+    if not m:
+        return ""
+    value = m.group(1)
+    uuids = UUID_RE.findall(value)
+    if uuids:
+        return uuids[0].lower()
+    return value.strip("[]")
 
 
 def normalize_connections(data):
