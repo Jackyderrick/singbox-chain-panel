@@ -121,8 +121,13 @@ docs/cf-distributed-panel-architecture.md
 ├── .gitignore
 ├── Dockerfile
 ├── README.md
+├── deploy
+│   └── systemd
+│       └── singbox-watchdog.service
 ├── docker-compose.yml
-└── panel.py
+├── panel.py
+└── scripts
+    └── singbox_watchdog.py
 ```
 
 ### 关键文件
@@ -134,6 +139,8 @@ docs/cf-distributed-panel-architecture.md
 | `.env.example` | Docker Compose 和进程模式所需环境变量模板 |
 | `Dockerfile` | 构建容器镜像，安装 Python 3.11 slim 和 sing-box 1.14.0 |
 | `docker-compose.yml` | 以 `SINGBOX_MANAGE_MODE=process` 启动面板和 sing-box |
+| `scripts/singbox_watchdog.py` | 检查 `sing-box`、443 入站、面板、本机 Nginx，连续失败后自动重启 |
+| `deploy/systemd/singbox-watchdog.service` | watchdog 的 systemd 服务单元 |
 | `README.md` | 给 AI 和维护者的安装、运行、接口、数据结构说明 |
 
 ### 调用链
@@ -396,6 +403,28 @@ panel.example.com  A   SERVER_IPV4   Proxied 或 DNS only
 ```
 
 VLESS Reality 节点域名建议使用 `DNS only`。Cloudflare 免费代理不转发任意 VLESS Reality TCP 流量。
+
+### 4.7 可选：安装 sing-box 健康 watchdog
+
+在服务器执行：
+
+```bash
+install -m 0755 scripts/singbox_watchdog.py /opt/singbox-panel/singbox_watchdog.py
+install -m 0644 deploy/systemd/singbox-watchdog.service /etc/systemd/system/singbox-watchdog.service
+systemctl daemon-reload
+systemctl enable --now singbox-watchdog
+systemctl status singbox-watchdog --no-pager -l
+```
+
+watchdog 默认每 30 秒检查：
+
+- `sing-box` 是否 active。
+- `127.0.0.1:443` 是否监听。
+- 面板 `http://127.0.0.1:8080/` 是否可访问。
+- `nginx` 是否 active。
+- 本机 Nginx 反代 `Host: panel.5858188.xyz` 是否可访问。
+
+连续 3 次失败后，watchdog 会先执行 `sing-box check -c /etc/sing-box/config.json`，通过后再重启 `sing-box`。如果面板或 Nginx 不可用，也会尝试重启对应服务。
 
 ### 4.7 安装坑
 
@@ -1046,6 +1075,7 @@ curl -s \
 | 节点域名不可用 | Cloudflare `node` 记录开了代理 | VLESS Reality 不是普通 HTTPS | 将 `node.example.com` 改为 DNS only |
 | Cloudflare `522` | 访问 `panel.example.com` | Cloudflare 到源站超时，常见于源站关机、CPU 被平台限制、Nginx 无响应 | 先确认服务器开机，再查 `systemctl status nginx singbox-panel sing-box` |
 | 页面弹出 `Failed to fetch` | 面板自动刷新连接时 | `/api/connections` 请求被网络中断或源站超时 | 当前版本自动轮询失败不弹窗，只在连接状态文字中提示 |
+| 443 端口不通但面板可访问 | 客户端节点全部不可用 | `sing-box` 未监听 VLESS 入站或服务异常 | 执行 `systemctl restart sing-box`，并启用 `singbox-watchdog` |
 | 面板域名打不开 | Nginx 或 DNS 未生效 | 80 端口未监听或 DNS 未解析 | 执行 `nginx -t`、`systemctl status nginx`、检查 DNS |
 | 设备流量不增长 | 没有活跃连接或 Clash API 未启动 | `/connections` 取不到数据 | 检查 `ss -lntp | grep 9090` 和 `/api/connections` |
 

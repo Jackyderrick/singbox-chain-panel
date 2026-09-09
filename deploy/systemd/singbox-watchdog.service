@@ -1,0 +1,25 @@
+[Unit]
+Description=Sing-box panel health watchdog
+After=network-online.target sing-box.service singbox-panel.service nginx.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=WATCHDOG_SINGBOX_SERVICE=sing-box
+Environment=WATCHDOG_PANEL_SERVICE=singbox-panel
+Environment=WATCHDOG_NGINX_SERVICE=nginx
+Environment=WATCHDOG_SINGBOX_CONFIG=/etc/sing-box/config.json
+Environment=WATCHDOG_PANEL_URL=http://127.0.0.1:8080/
+Environment=WATCHDOG_NGINX_URL=http://127.0.0.1/
+Environment=WATCHDOG_NGINX_HOST=panel.5858188.xyz
+Environment=WATCHDOG_CHECK_HOST=127.0.0.1
+Environment=WATCHDOG_CHECK_PORT=443
+Environment=WATCHDOG_INTERVAL_SECONDS=30
+Environment=WATCHDOG_FAIL_THRESHOLD=3
+Environment=WATCHDOG_COOLDOWN_SECONDS=120
+ExecStart=/usr/bin/python3 /opt/singbox-panel/singbox_watchdog.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
