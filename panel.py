@@ -238,6 +238,24 @@ def get_outbound(cfg, tag):
     return None
 
 
+def first_available_home_tag(cfg, state):
+    candidates = [
+        state.get("active_home"),
+        cfg.get("route", {}).get("final"),
+        DEFAULT_HOME_TAG,
+    ]
+    candidates.extend(sorted(state.get("homes", {}).keys()))
+    candidates.extend(
+        outbound.get("tag")
+        for outbound in cfg.get("outbounds", [])
+        if outbound.get("type") == "socks" and outbound.get("tag", "").startswith(SOCKS_OUT_PREFIX)
+    )
+    for tag in candidates:
+        if tag and get_outbound(cfg, tag):
+            return tag
+    return ""
+
+
 def slug(text):
     safe = []
     for ch in text.lower():
@@ -720,11 +738,13 @@ def delete_device(data):
 @state_transaction
 def add_customer(data):
     name = (data.get("name") or "客户").strip()[:48]
-    home_tag = data.get("home_tag") or DEFAULT_HOME_TAG
     quota = float(data.get("quota_gb") or 0)
     state = ensure_state_from_config()
     cfg = read_config()
+    home_tag = data.get("home_tag") or state.get("active_home") or cfg.get("route", {}).get("final") or DEFAULT_HOME_TAG
     if not get_outbound(cfg, home_tag):
+        home_tag = first_available_home_tag(cfg, state)
+    if not home_tag or not get_outbound(cfg, home_tag):
         raise PanelError("home proxy not found")
     customer_id = "customer-" + slug(name)
     if customer_id in state["customers"]:
