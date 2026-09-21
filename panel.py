@@ -408,6 +408,28 @@ def rebuild_customer_routes(cfg, state):
     return cfg
 
 
+def sync_vless_users_from_state(cfg, state):
+    inbound = get_vless_inbound(cfg)
+    existing = {}
+    for user in inbound.get("users", []):
+        uid = user.get("uuid")
+        if uid:
+            existing[uid] = user
+    active = []
+    ts = now_ts()
+    for uid, dev in sorted(state.get("devices", {}).items()):
+        expired = bool(dev.get("expires_at") and int(dev.get("expires_at")) <= ts)
+        if not dev.get("enabled", True) or expired:
+            continue
+        user = dict(existing.get(uid) or {"uuid": uid})
+        user["name"] = uid
+        if "flow" not in user:
+            user["flow"] = DEFAULT_VLESS_FLOW
+        active.append(user)
+    inbound["users"] = active
+    return cfg
+
+
 def public_ip():
     try:
         return run(["curl", "-4fsS", "--max-time", "6", "https://api.ipify.org"], timeout=10).strip()
@@ -1044,17 +1066,7 @@ def expire_devices_loop():
                         expired_any = True
                 if expired_any:
                     cfg = read_config()
-                    inbound = get_vless_inbound(cfg)
-                    active = []
-                    for u in inbound.get("users", []):
-                        uid = u.get("uuid")
-                        dev = state.get("devices", {}).get(uid)
-                        if dev and dev.get("enabled", True) and not (dev.get("expires_at") and int(dev.get("expires_at")) <= ts):
-                            u["name"] = uid
-                            if "flow" not in u:
-                                u["flow"] = DEFAULT_VLESS_FLOW
-                            active.append(u)
-                    inbound["users"] = active
+                    cfg = sync_vless_users_from_state(cfg, state)
                     cfg = rebuild_customer_routes(cfg, state)
                     atomic_write_config(cfg)
                     save_json(STATE_PATH, state)
@@ -1073,19 +1085,7 @@ def migrate_config_for_customers():
         "external_controller": CLASH_API_ADDR,
         "secret": clash_secret()
     }
-    inbound = get_vless_inbound(cfg)
-    active_users = []
-    for user in inbound.get("users", []):
-        uid = user.get("uuid")
-        if uid:
-            user["name"] = uid
-            if "flow" not in user:
-                user["flow"] = DEFAULT_VLESS_FLOW
-            dev = state.get("devices", {}).get(uid, {})
-            expired = bool(dev.get("expires_at") and int(dev.get("expires_at")) <= now_ts())
-            if dev.get("enabled", True) and not expired:
-                active_users.append(user)
-    inbound["users"] = active_users
+    cfg = sync_vless_users_from_state(cfg, state)
     cfg = rebuild_customer_routes(cfg, state)
     updated = json.dumps(cfg, sort_keys=True)
     if updated != original:
