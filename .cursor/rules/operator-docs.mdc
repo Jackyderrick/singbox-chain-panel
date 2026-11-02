@@ -1,0 +1,12 @@
+---
+description: Language and secret rules for README, handover, and agent docs
+globs: README.md,AGENTS.md,docs/**/*.md
+alwaysApply: false
+---
+
+# Operator docs
+
+- `README.md` and `docs/HANDOVER-*.md` stay in Chinese. `AGENTS.md` and `.cursor/rules/` stay in English. The owner communicates in Chinese.
+- Handover files record topology and read-only checks only. Do not add passwords, `PANEL_SECRET`, Reality private keys, SOCKS5 credentials, session cookies, or contents of `state.json` / `config.json`.
+- The 2026-11-02 handover was not live-verified over SSH when it was written. Do not treat its commands as permission to run them against production.
+- Do not "fix" docs by changing `panel.py`, systemd units, Compose, or the Dockerfile.

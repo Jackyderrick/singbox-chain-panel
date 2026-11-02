@@ -1,0 +1,15 @@
+---
+description: Always-on production and credential safety for the sing-box panel
+alwaysApply: true
+---
+
+# Operations safety
+
+The production host is a 1 vCPU VPS that has been force-shut down for sustained high CPU. Treat it as fragile. The owner communicates in Chinese.
+
+- Never touch the production server from code or from an agent task without explicit user approval in the current request. That includes SSH, deploys, `systemctl` restarts, DNS edits, firewall changes, and requests to the public panel or node.
+- Do not run frequent speed tests, extra polling loops, or repeated service restarts against production. The panel already polls the Clash API every 5 seconds and the watchdog already checks every 30 seconds.
+- Before any sing-box config change, run `sing-box check` and back up `state.json` and `config.json` together. Restoring only one file can desync panel records from VLESS users.
+- Ports 8080 (panel) and 9090 (Clash API) stay local-only (`127.0.0.1`). Do not bind them publicly, publish them in Compose, or open them in a firewall. Do not deploy the code default `PANEL_HOST=0.0.0.0` with host networking onto the production host.
+- The node domain `node.5858188.xyz` stays Cloudflare DNS-only. Orange-cloud proxying breaks VLESS Reality. The panel hostname may stay proxied.
+- Never commit or paste passwords, `PANEL_PASSWORD`, `PANEL_SECRET`, Reality private keys, SOCKS5 credentials, or session cookies. Do not commit `state.json`, live `config.json`, `.env`, or `/etc/singbox-panel.env`. `.env.example` keeps placeholders only.
