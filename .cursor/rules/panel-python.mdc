@@ -1,0 +1,16 @@
+---
+description: Stdlib-only, single-file conventions for panel.py and the watchdog
+globs: panel.py,scripts/**/*.py
+alwaysApply: false
+---
+
+# Panel Python
+
+- Python standard library only. Do not add pip dependencies, a `requirements.txt`, a web framework, or a frontend build.
+- Keep the panel in `panel.py` unless the user explicitly asks to split it. Add HTTP routes in `Handler.do_GET` or the `do_POST` `routes` dict. Add UI inside the `page()` HTML string.
+- Match the existing style: module-level `snake_case` functions, env constants at the top, no type annotations, no f-strings, no walrus operator. Format with `%` or concatenation. Do not reformat the file onto a newer style in passing.
+- Raise `PanelError` for expected failures. Return `{"ok": false, "error": "..."}` from handlers. Keep the embedded UI in Chinese (`lang="zh-CN"`).
+- Mutate `state.json` inside `@state_transaction`. Persist with `save_json` (temp file, then `os.replace`).
+- Write sing-box config only through `atomic_write_config`. That helper backs up, runs `sing-box check`, replaces the file, and restarts sing-box. Do not open `config.json` and write it yourself.
+- `python3 -m py_compile panel.py` and `python3 -m py_compile scripts/singbox_watchdog.py` are the local checks. Do not start `panel.py` against `/etc/sing-box` or `/opt/singbox-panel` unless the user explicitly approved that host.
+- Leave the watchdog interval at 30 seconds. Do not tighten `TRAFFIC_POLL_SECONDS` (5) or `EXPIRE_CHECK_SECONDS` (60) for production.
