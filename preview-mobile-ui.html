@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sing-box Panel</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--line:#d9dee7;--text:#161a22;--muted:#6b7280;--accent:#0f766e;--danger:#b42318;--dark:#111827;--soft:#f3f4f6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{height:58px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:5}
+header b{font-size:17px}.wrap{max-width:1180px;margin:22px auto;padding:0 18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.full{grid-column:1/-1}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}h2{font-size:16px;margin:0 0 12px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+label.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:120px;flex:1}
+label.field > span{font-weight:600}
+input,button,select{height:36px;border:1px solid var(--line);border-radius:6px;padding:0 10px;background:#fff;color:var(--text);font:inherit}
+input,select{min-width:0;width:100%}button{cursor:pointer;white-space:nowrap}button.primary{background:var(--dark);color:#fff;border-color:var(--dark)}button.good{background:var(--accent);color:#fff;border-color:var(--accent)}button.danger{background:#fff;color:var(--danger);border-color:#f1b6b2}button.ghost{background:transparent}button.small{height:30px;padding:0 8px;font-size:12px}button.icon{width:36px;padding:0;flex:0 0 auto}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;border-top:1px solid var(--line);padding:10px 8px;vertical-align:middle}th{color:var(--muted);font-weight:600}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
+.pill{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);gap:4px}.ok{color:#087443}.bad{color:#b42318}.warn{color:#b54708}.muted{color:var(--muted)}
+.pill.ok{color:#087443;background:#ecfdf3;border-color:#abefc6}.pill.bad{color:#b42318;background:#fef3f2;border-color:#f1b6b2}.pill.warn{color:#b54708;background:#fff6ed;border-color:#f9dbaf}
+pre{white-space:pre-wrap;background:#0b1020;color:#d7e0ff;border-radius:8px;padding:12px;max-height:360px;overflow:auto}
+.login{max-width:380px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:8px;padding:22px}.login input{width:100%;margin:10px 0}.hidden{display:none}
+.customer{border:1px solid var(--line);border-radius:12px;padding:14px;margin:0 0 14px;background:#fff}
+.customer-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.customer-title{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.customer-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{background:var(--soft);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--muted)}
+.details{margin-top:8px}.details > summary{cursor:pointer;color:var(--muted);user-select:none}.details[open] > summary{margin-bottom:8px}
+.toolbar{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0}
+.toolbar .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.device-list{display:flex;flex-direction:column;gap:10px}
+.device-card{border:1px solid var(--line);border-left-width:3px;border-radius:10px;padding:12px;background:#fafbfc}
+.device-card.tone-ok{border-left-color:#087443}
+.device-card.tone-warn{border-left-color:#f79009}
+.device-card.tone-bad{border-left-color:#b42318}
+.device-top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.device-name{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.device-compact{display:none}
+.device-stats{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.stat .label{font-size:12px;color:var(--muted)}.stat .value{font-size:16px;font-weight:700}
+.stat .sub{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.stat .bar{margin-top:6px}
+.uuid-row,.link-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.uuid-row .mono{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu-wrap{position:relative}
+.menu{position:absolute;right:0;top:40px;min-width:160px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;z-index:6;display:none}
+.menu.open{display:block}.menu button{width:100%;justify-content:flex-start;border:0;background:transparent;height:34px;text-align:left}.menu button:hover{background:var(--soft)}.menu .danger{color:var(--danger)}
+.settings{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.settings-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.danger-zone{margin-top:12px;padding-top:12px;border-top:1px dashed #f1b6b2;display:flex;justify-content:flex-end}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.add-device-wrap{margin:12px 0}
+.add-toggle{border-style:dashed}
+.add-device{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px;padding:12px;border:1px dashed var(--line);border-radius:10px;background:#fff}
+.customer-quota{margin-top:8px}
+.bar{height:6px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;width:0;border-radius:999px;background:#087443}
+.bar-fill.ok{background:#087443}.bar-fill.warn{background:#f79009}.bar-fill.bad{background:#b42318}
+.customer-quota .bar{height:8px}
+@media(min-width:700px){
+  .toolbar{grid-template-columns:2fr 1fr 1fr}
+  .toolbar .filters{grid-template-columns:1fr 1fr}
+  .device-stats{grid-template-columns:1.2fr 1fr}
+  .settings-grid{grid-template-columns:1fr 1fr}
+  .add-device{grid-template-columns:1fr 140px auto}
+}
+@media(max-width:699px){
+  .device-list{gap:6px}
+  .device-card{padding:7px 10px;border-radius:8px}
+  .device-top{gap:6px}
+  .device-name{font-size:14px}
+  .device-stats,.uuid-row,.link-row{display:none}
+  .device-compact{display:flex;align-items:center;gap:8px;margin-top:3px;min-width:0}
+  .device-compact .traffic-text{font-size:13px;font-weight:700;white-space:nowrap}
+  .device-compact .bar{flex:1;min-width:40px}
+  .device-compact .expiry{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+  button.icon{width:28px;height:28px}
+  .menu{top:32px}
+  .pill{padding:1px 7px}
+  .customer{padding:10px;margin-bottom:10px}
+  .customer-meta{margin-top:4px;gap:6px}
+  .chip{padding:2px 8px}
+  .toolbar{margin:8px 0}
+  .add-device-wrap{margin:8px 0}
+  section{padding:12px}
+}
+@media(max-width:850px){.grid{grid-template-columns:1fr}header{padding:0 14px}.wrap{padding:0 12px}.row > button{flex:1 1 auto}}
+</style>
+</head>
+<body>
+<div id="login" class="login hidden"><h2>登录面板</h2><input id="pw" type="password" placeholder="管理密码"><button class="primary" onclick="login()">登录</button><p id="loginErr" class="bad"></p></div>
+<div id="app" class="hidden">
+<header><b>Sing-box 管理面板</b><span id="svc" class="pill">...</span></header>
+<main class="wrap grid">
+<section><h2>运行状态</h2><div class="row"><button onclick="refresh()">刷新</button><button onclick="restart()">重启 sing-box</button><button onclick="loadLogs()">查看日志</button><button onclick="loadConnections(true)">刷新连接</button></div><p class="muted">服务器出口 IP：<span id="serverIp">...</span></p><p class="muted">默认家宽出口：<span id="activeHome">...</span></p></section>
+<section><h2>添加客户</h2><div class="row"><label class="field"><span>客户名</span><input id="customerName" placeholder="客户名"></label><label class="field"><span>家宽出口</span><select id="customerHome"></select></label><label class="field"><span>设备数上限</span><input id="customerLimit" type="number" min="0" step="1" placeholder="0 = 不限制"></label><label class="field"><span>默认有效期（天）</span><input id="customerDays" type="number" min="0" step="1" value="30" placeholder="0 = 永久"></label><label class="field"><span>超限动作</span><select id="customerAction"><option value="alert">超限告警</option><option value="disable_customer">超限停用</option></select></label><label class="field"><span>月流量（GB）</span><input id="customerQuota" type="number" min="0" step="1" placeholder="0 = 不限制"></label><button class="primary" onclick="addCustomer()">添加</button></div></section>
+<section class="full"><h2>客户管理</h2><div id="customers"></div></section>
+<section><h2>添加家宽 SOCKS5</h2><div class="row"><input id="homeName" placeholder="名称"><input id="homeServer" placeholder="地址"><input id="homePort" type="number" placeholder="端口"><input id="homeUser" placeholder="用户名"><input id="homePass" placeholder="密码"><button class="primary" onclick="addHome()">添加</button></div></section>
+<section><h2>家宽出口</h2><table><thead><tr><th>名称</th><th>地址</th><th>用户</th><th>操作</th></tr></thead><tbody id="homes"></tbody></table></section>
+<section class="full"><h2>当前连接流量</h2><p class="muted">上传：<span id="connUp">0 B</span> ｜ 下载：<span id="connDown">0 B</span> ｜ <span id="connStatus">等待刷新</span></p><div style="overflow:auto"><table><thead><tr><th>UUID</th><th>来源</th><th>目标</th><th>上传</th><th>下载</th><th>合计</th><th>链路</th></tr></thead><tbody id="connections"><tr><td colspan="7" class="muted">点击“刷新连接”加载</td></tr></tbody></table></div></section>
+<section class="full"><h2>日志</h2><pre id="logs">点击“查看日志”加载</pre></section>
+</main></div>
+<script>
+window.__previewApi = (function(){
+  const now = Math.floor(Date.now()/1000);
+  const GB = 1024*1024*1024;
+  const pad = n => String(n).padStart(2,'0');
+  const fmtTs = ts => {
+    if(!ts) return '永久';
+    const d = new Date(ts*1000);
+    return d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  };
+  const setUsed = (d, gb) => {
+    d.upload_bytes = Math.round(gb*0.18*GB);
+    d.download_bytes = Math.round(gb*0.82*GB);
+    d.used_bytes = d.upload_bytes + d.download_bytes;
+  };
+  const mkDev = (i, cid, extra={}) => {
+    const expired = i%7===0;
+    const permanent = !expired && i%4===0;
+    const expires_at = expired ? now-86400 : (permanent ? 0 : now+86400*(i%40));
+    const d = Object.assign({
+      uuid: '11111111-1111-1111-1111-' + String(100000000000+i).slice(-12),
+      name: '设备'+i,
+      customer_id: cid,
+      enabled: i%5!==0,
+      expired: expired,
+      expires_at: expires_at,
+      expires_text: expired ? '已过期' : fmtTs(expires_at),
+      upload_bytes: 0,
+      download_bytes: 0,
+      used_bytes: 0,
+      link: 'vless://example-link-'+i
+    }, extra);
+    setUsed(d, 0.12);
+    return d;
+  };
+  let customers = [
+    {id:'c_demo', name:'演示客户', home_tag:'home1', device_limit:3, default_days:0, limit_action:'alert', quota_gb:100, over_limit:true, online_ip_count:4, online_ips:['1.2.3.4','5.6.7.8','9.9.9.9','8.8.8.8']},
+    {id:'c_zero', name:'永久默认客户', home_tag:'home1', device_limit:0, default_days:0, limit_action:'alert', quota_gb:0, over_limit:false, online_ip_count:1, online_ips:['10.0.0.2']},
+    {id:'c_soon', name:'即将到期客户', home_tag:'home2', device_limit:5, default_days:30, limit_action:'alert', quota_gb:20, over_limit:false, online_ip_count:1, online_ips:['172.16.0.4']}
+  ];
+  let devices = [];
+  for(let i=1;i<=33;i++) devices.push(mkDev(i,'c_demo'));
+  const byName = n => devices.find(d=>d.name===n && d.customer_id==='c_demo');
+  setUsed(byName('设备1'), 36);
+  setUsed(byName('设备2'), 22);
+  setUsed(byName('设备3'), 8);
+  setUsed(byName('设备4'), 12);
+  setUsed(byName('设备5'), 4);
+  devices.push(mkDev(101,'c_zero',{name:'唯一设备',enabled:true,expired:false,expires_at:0,expires_text:'永久'}));
+  setUsed(devices[devices.length-1], 1.2);
+  devices.push(mkDev(102,'c_soon',{name:'笔记本',enabled:true,expired:false,expires_at:now+2*86400,expires_text:fmtTs(now+2*86400)}));
+  setUsed(devices[devices.length-1], 6);
+  let homes = [{tag:'home1',name:'家宽A',server:'1.1.1.1',server_port:1080,username:'u',active:true},{tag:'home2',name:'家宽B',server:'2.2.2.2',server_port:1080,username:'',active:false}];
+  return async function(path, data){
+    await new Promise(r=>setTimeout(r,30));
+    if(path==='/api/login') return {ok:true};
+    if(path==='/api/status') return {ok:true, service:'active', server_ip:'203.0.113.10', active_home:'家宽A', homes, customers, devices};
+    if(path==='/api/connections'){
+      return {ok:true, upload_total:1234567, download_total:9876543, connections:[], device_totals:devices.map(d=>({uuid:d.uuid,upload_bytes:d.upload_bytes,download_bytes:d.download_bytes,used_bytes:d.used_bytes}))};
+    }
+    if(path==='/api/logs') return {ok:true, logs:'[preview] mock logs only\n'};
+    if(path==='/api/customer/set'){
+      let c=customers.find(x=>x.id===data.id); if(c){ Object.assign(c,{home_tag:data.home_tag,device_limit:Number(data.device_limit),default_days:Number(data.default_days),limit_action:data.limit_action,quota_gb:Number(data.quota_gb)}); c.over_limit = !!(Number(c.device_limit) && c.online_ip_count > Number(c.device_limit)); }
+      return {ok:true};
+    }
+    if(path==='/api/customer/add'){
+      customers.push({id:'c_'+Date.now(), name:data.name||'新客户', home_tag:data.home_tag||'home1', device_limit:Number(data.device_limit||0), default_days:Number(data.default_days===''||data.default_days==null?30:data.default_days), limit_action:data.limit_action||'alert', quota_gb:Number(data.quota_gb||0), over_limit:false, online_ip_count:0, online_ips:[]});
+      return {ok:true};
+    }
+    if(path==='/api/customer/delete'){ customers=customers.filter(c=>c.id!==data.id); devices=devices.filter(d=>d.customer_id!==data.id); return {ok:true}; }
+    if(path==='/api/device/add'){
+      let n=devices.length+1;
+      let days=Number(data.days);
+      let d=mkDev(n,data.customer_id,{name:data.name||('新设备'+n), enabled:true, expired:false, expires_at:days>0?now+days*86400:0, expires_text:days>0?fmtTs(now+days*86400):'永久'});
+      devices.push(d); return {ok:true, link:d.link};
+    }
+    if(path==='/api/device/set'){
+      let d=devices.find(x=>x.uuid===data.uuid); if(!d) throw new Error('not found');
+      if('name' in data) d.name=data.name;
+      if('enabled' in data) d.enabled=!!data.enabled;
+      if('days' in data){ let days=Number(data.days); d.expires_at=days>0?now+days*86400:0; d.expires_text=days>0?fmtTs(d.expires_at):'永久'; d.expired=false; }
+      return {ok:true};
+    }
+    if(path==='/api/device/delete'){ devices=devices.filter(d=>d.uuid!==data.uuid); return {ok:true}; }
+    if(path.startsWith('/api/home')) return {ok:true, ip:'198.51.100.2'};
+    if(path==='/api/restart') return {ok:true};
+    return {ok:true};
+  };
+})();
+</script>
+<style>body,button,input,select{font-family:system-ui,-apple-system,"Segoe UI","WenQuanYi Micro Hei","Droid Sans Fallback",sans-serif}</style>
+<script>
+async function api(path, data){ if(window.__previewApi) return window.__previewApi(path, data);let opt={headers:{'Content-Type':'application/json'}};if(data){opt.method='POST';opt.body=JSON.stringify(data)}let r=await fetch(path,opt);if(r.status===401){showLogin();throw new Error('未登录')}let text=await r.text();if(!text.trim())throw new Error('接口没有返回内容，请刷新后重试');let j;try{j=JSON.parse(text)}catch(e){throw new Error('接口返回异常：'+text.slice(0,120))}if(!r.ok)throw new Error(j.error||('HTTP '+r.status));if(!j.ok&&j.error)throw new Error(j.error);return j}
+function showLogin(){document.getElementById('login').classList.remove('hidden');document.getElementById('app').classList.add('hidden')}
+function showApp(){document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden')}
+async function login(){try{await api('/api/login',{password:document.getElementById('pw').value});showApp();refresh()}catch(e){document.getElementById('loginErr').textContent=e.message}}
+function copy(t){if(navigator.clipboard&&navigator.clipboard.writeText){return navigator.clipboard.writeText(t).catch(()=>prompt('复制内容',t))}prompt('复制内容',t)}
+function daysValue(v, fallback){return (v===0 || v==='0') ? 0 : (v===null||v===undefined||v==='' ? fallback : Number(v))}
+function fmtBytes(n){n=Number(n||0);let u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return (i?n.toFixed(2):n.toFixed(0))+' '+u[i]}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function shortUuid(u){u=String(u||'');return u.length<=12?u:(u.slice(0,8)+'…'+u.slice(-4))}
+function quotaBytesOf(c){return Number((c&&c.quota_gb)||0)*1024*1024*1024}
+function sumUsed(cid, devices){return (devices||[]).filter(d=>d.customer_id===cid).reduce((s,d)=>s+Number(d.used_bytes||0),0)}
+function barTone(used, quota){if(!(quota>0))return 'ok';let r=used/quota;if(r>=1)return 'bad';if(r>=0.8)return 'warn';return 'ok'}
+function barHtml(used, quota, field){if(!(quota>0))return '';let pct=Math.max(0,Math.min(100,used/quota*100));let tone=barTone(used,quota);return `<div class="bar"><div class="bar-fill ${tone}" data-field="${field||'bar'}" style="width:${pct.toFixed(1)}%"></div></div>`}
+function quotaLabel(used, quotaGb){if(!(Number(quotaGb)>0))return '月流量 '+fmtBytes(used)+' · 不限制';return '月流量 '+fmtBytes(used)+' / '+String(Number(quotaGb))+' GB'}
+function isExpired(d){let ts=Number(d&&d.expires_at||0);return !!(d&&(d.expired||(ts&&ts*1000<=Date.now())))}
+function isExpiringSoon(d){if(!d||isExpired(d))return false;let ts=Number(d.expires_at||0);if(!ts)return false;let left=ts*1000-Date.now();return left>0&&left<=3*86400000}
+function deviceStatus(d){if(isExpired(d))return {text:'已过期',cls:'bad',tone:'bad'};if(!d.enabled)return {text:'停用',cls:'bad',tone:'bad'};if(isExpiringSoon(d))return {text:'即将到期',cls:'warn',tone:'warn'};return {text:'启用',cls:'ok',tone:'ok'}}
+function customerOverQuota(c, devices){let quota=quotaBytesOf(c);if(!(quota>0))return false;return sumUsed(c.id, devices)>=quota}
+function customerStatus(c, devices){if(c.over_limit||customerOverQuota(c, devices))return {text:'超限',cls:'bad'};let list=(devices||[]).filter(d=>d.customer_id===c.id);if(list.some(isExpired))return {text:'已过期',cls:'bad'};if(list.some(isExpiringSoon))return {text:'即将到期',cls:'warn'};return {text:'正常',cls:'ok'}}
+
+let lastHomes=[], lastCustomers=[], lastDevices=[];
+let uiState={}; // per customer: search,filter,sort,page,settingsOpen,ipsOpen,draft,openMenu,addOpen
+function getUi(cid){
+  if(!uiState[cid]) uiState[cid]={search:'',filter:'all',sort:'default',page:1,settingsOpen:false,ipsOpen:false,draft:null,openMenu:null,renaming:null,addOpen:false};
+  return uiState[cid];
+}
+function uiBusy(){
+  if(document.querySelector('.menu.open')) return true;
+  if(document.querySelector('[data-renaming="1"]')) return true;
+  let ae=document.activeElement;
+  if(ae && document.getElementById('customers') && document.getElementById('customers').contains(ae) && (ae.tagName==='INPUT'||ae.tagName==='SELECT'||ae.tagName==='TEXTAREA'||ae.isContentEditable)) return true;
+  for(let cid in uiState){ if(uiState[cid].draft) return true; }
+  return false;
+}
+
+async function refresh(){try{let s=await api('/api/status');showApp();lastHomes=s.homes;lastCustomers=s.customers;lastDevices=s.devices;document.getElementById('svc').textContent='sing-box '+s.service;document.getElementById('svc').className='pill '+(s.service==='active'?'ok':'bad');document.getElementById('serverIp').textContent=s.server_ip||'未知';document.getElementById('activeHome').textContent=s.active_home;renderSelects();renderCustomers(s.customers,s.devices,true)}catch(e){alert(e.message)}}
+function renderSelects(){let opts=lastHomes.map(h=>`<option value="${esc(h.tag)}">${esc(h.name)} - ${esc(h.server)}:${h.server_port}</option>`).join('');document.getElementById('customerHome').innerHTML=opts}
+
+function filteredDevices(cid, devices){
+  let ui=getUi(cid);
+  let list=devices.filter(d=>d.customer_id===cid);
+  let q=(ui.search||'').trim().toLowerCase();
+  if(q) list=list.filter(d=>String(d.name||'').toLowerCase().includes(q)||String(d.uuid||'').toLowerCase().includes(q));
+  if(ui.filter==='enabled') list=list.filter(d=>d.enabled && !d.expired);
+  else if(ui.filter==='disabled') list=list.filter(d=>!d.enabled && !d.expired);
+  else if(ui.filter==='expired') list=list.filter(d=>d.expired);
+  if(ui.sort==='traffic') list=list.slice().sort((a,b)=>Number(b.used_bytes||0)-Number(a.used_bytes||0));
+  else if(ui.sort==='expires') list=list.slice().sort((a,b)=>{
+    let ae=Number(a.expires_at||0), be=Number(b.expires_at||0);
+    if(ae===0 && be===0) return 0; if(ae===0) return 1; if(be===0) return -1; return ae-be;
+  });
+  return list;
+}
+
+function renderDeviceCard(d){
+  let st=deviceStatus(d);
+  let ui=getUi(d.customer_id);
+  let menuOpen=ui.openMenu===d.uuid;
+  let renaming=ui.renaming===d.uuid;
+  let c=lastCustomers.find(x=>x.id===d.customer_id)||{};
+  let quota=quotaBytesOf(c);
+  let used=Number(d.used_bytes||0);
+  let nameHtml=renaming?`<input data-renaming="1" style="max-width:180px" value="${esc(d.name)}" onkeydown="if(event.key==='Enter'){event.preventDefault();commitRename('${d.uuid}',this.value)}else if(event.key==='Escape'){cancelRename('${d.customer_id}')}" onblur="commitRename('${d.uuid}',this.value)">`:`<div class="device-name" title="${esc(d.name)}">${esc(d.name)}</div>`;
+  let trafficTitle='上传 '+fmtBytes(d.upload_bytes)+' · 下载 '+fmtBytes(d.download_bytes);
+  return `<div class="device-card tone-${st.tone}" data-uuid="${d.uuid}" data-customer="${esc(d.customer_id)}" data-quota="${quota}">
+    <div class="device-top">
+      <div style="min-width:0;flex:1">${nameHtml}</div>
+      <span class="pill ${st.cls}" data-field="status">${st.text}</span>
+      <div class="menu-wrap">
+        <button class="icon" type="button" onclick="toggleMenu('${d.customer_id}','${d.uuid}',event)" aria-label="更多操作">⋯</button>
+        <div class="menu ${menuOpen?'open':''}" data-menu-for="${d.uuid}">
+          <button type="button" onclick="closeMenus();copy('${d.link}')">复制链接</button>
+          <button type="button" onclick="closeMenus();copy('${d.uuid}')">复制 UUID</button>
+          <button type="button" onclick="startRename('${d.customer_id}','${d.uuid}')">重命名</button>
+          <button type="button" onclick="toggleDevice('${d.uuid}',${!d.enabled})">${d.enabled?'停用':'启用'}</button>
+          <button type="button" onclick="renewDevice('${d.uuid}',30)">续 1 月</button>
+          <button type="button" onclick="renewDevice('${d.uuid}',0)">设为永久</button>
+          <button type="button" class="danger" onclick="delDevice('${d.uuid}','${esc(d.name)}')">删除</button>
+        </div>
+      </div>
+    </div>
+    <div class="device-compact">
+      <span class="traffic-text" data-field="used" title="${esc(trafficTitle)}">${fmtBytes(used)}</span>
+      ${barHtml(used, quota, 'bar')}
+      <span class="expiry" data-field="expires">${esc(d.expires_text||'-')}</span>
+    </div>
+    <div class="device-stats">
+      <div class="stat"><div class="label">总流量${quota>0?' / 月配额':''}</div><div class="value" data-field="used">${fmtBytes(used)}</div>${barHtml(used, quota, 'bar')}<div class="sub"><span>上传 <b data-field="up">${fmtBytes(d.upload_bytes)}</b></span><span>下载 <b data-field="down">${fmtBytes(d.download_bytes)}</b></span></div></div>
+      <div class="stat"><div class="label">到期时间</div><div class="value" style="font-size:14px" data-field="expires">${esc(d.expires_text||'-')}</div></div>
+    </div>
+    <div class="uuid-row"><span class="mono" title="${d.uuid}">${shortUuid(d.uuid)}</span><button class="small" type="button" onclick="copy('${d.uuid}')">复制 UUID</button></div>
+    <div class="link-row"><button class="small primary" type="button" onclick="copy('${d.link}')">复制链接</button></div>
+  </div>`;
+}
+
+function renderCustomers(rows,devices,force){
+  let box=document.getElementById('customers');
+  if(!force && box.children.length){ patchDynamic(rows,devices); return; }
+  box.innerHTML='';
+  rows.forEach(c=>{
+    let ui=getUi(c.id);
+    let all=devices.filter(d=>d.customer_id===c.id);
+    let list=filteredDevices(c.id, devices);
+    let pageSize=10;
+    let pages=Math.max(1, Math.ceil(list.length/pageSize));
+    if(ui.page>pages) ui.page=pages;
+    if(ui.page<1) ui.page=1;
+    let pageItems=list.slice((ui.page-1)*pageSize, ui.page*pageSize);
+    let homeOptions=lastHomes.map(h=>`<option value="${esc(h.tag)}" ${h.tag===c.home_tag?'selected':''}>${esc(h.name)} - ${esc(h.server)}:${h.server_port}</option>`).join('');
+    let actionOptions=`<option value="alert" ${c.limit_action==='alert'?'selected':''}>超限告警</option><option value="disable_customer" ${c.limit_action==='disable_customer'?'selected':''}>超限停用</option>`;
+    let limitText=(Number(c.device_limit||0)===0)?'不限':String(c.device_limit);
+    let ipText=(c.online_ips&&c.online_ips.length)?c.online_ips.map(esc).join('<br>'):'暂无';
+    let cards=pageItems.map(renderDeviceCard).join('') || '<div class="muted">暂无设备</div>';
+    let settingsOpen=ui.settingsOpen;
+    let ipsOpen=ui.ipsOpen;
+    let addOpen=!!ui.addOpen;
+    let cst=customerStatus(c, devices);
+    let usedSum=sumUsed(c.id, devices);
+    let quota=quotaBytesOf(c);
+    let div=document.createElement('div');
+    div.className='customer';
+    div.dataset.customerId=c.id;
+    div.innerHTML=`
+      <div class="customer-head">
+        <div>
+          <div class="customer-title"><b>${esc(c.name)}</b><span class="pill ${cst.cls}" data-field="cust-status">${cst.text}</span><span class="pill">${all.length} 台设备</span></div>
+          <div class="customer-meta">
+            <span class="chip">近 10 分钟在线 IP：<b data-field="online">${c.online_ip_count}</b>/${limitText}</span>
+            <span class="chip" data-field="quota-text">${quotaLabel(usedSum, c.quota_gb)}</span>
+          </div>
+          ${quota>0?`<div class="customer-quota" data-quota-bytes="${quota}" data-quota-gb="${Number(c.quota_gb||0)}">${barHtml(usedSum, quota, 'quota-bar')}</div>`:''}
+          <details class="details" data-ips ${ipsOpen?'open':''} ontoggle="getUi('${c.id}').ipsOpen=this.open">
+            <summary>查看 IP 明细 / 客户详情</summary>
+            <div class="muted">客户 ID：<span class="mono">${esc(c.id)}</span></div>
+            <div style="margin-top:6px" data-field="ips">${ipText}</div>
+          </details>
+        </div>
+        <button class="small" type="button" onclick="toggleSettings('${c.id}')">${settingsOpen?'收起设置':'客户设置'}</button>
+      </div>
+
+      <div class="add-device-wrap">
+        <button class="small add-toggle" type="button" onclick="toggleAdd('${c.id}')">${addOpen?'收起':'+ 添加设备'}</button>
+        <div class="add-device" id="add-${c.id}" style="${addOpen?'':'display:none'}">
+          <input id="newdev-${c.id}" placeholder="给 ${esc(c.name)} 添加设备">
+          <label class="field" style="min-width:0"><span>有效期（天，0=永久）</span><input id="newdays-${c.id}" type="number" min="0" step="1" value="${daysValue(c.default_days,30)}"></label>
+          <button class="primary" onclick="addDeviceToCustomer('${c.id}')">添加设备</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <input placeholder="搜索设备名 / UUID" value="${esc(ui.search)}" oninput="onSearch('${c.id}',this.value)">
+        <div class="filters">
+          <select onchange="onFilter('${c.id}',this.value)">
+            <option value="all" ${ui.filter==='all'?'selected':''}>全部状态</option>
+            <option value="enabled" ${ui.filter==='enabled'?'selected':''}>启用</option>
+            <option value="disabled" ${ui.filter==='disabled'?'selected':''}>停用</option>
+            <option value="expired" ${ui.filter==='expired'?'selected':''}>已过期</option>
+          </select>
+          <select onchange="onSort('${c.id}',this.value)">
+            <option value="default" ${ui.sort==='default'?'selected':''}>默认排序</option>
+            <option value="traffic" ${ui.sort==='traffic'?'selected':''}>流量降序</option>
+            <option value="expires" ${ui.sort==='expires'?'selected':''}>按到期时间</option>
+          </select>
+        </div>
+      </div>
+      <div class="device-list" data-device-list="${c.id}">${cards}</div>
+      <div class="pager">
+        <span class="muted">第 ${ui.page}/${pages} 页，共 ${list.length} 台</span>
+        <div class="row">
+          <button class="small" type="button" ${ui.page<=1?'disabled':''} onclick="gotoPage('${c.id}',${ui.page-1})">上一页</button>
+          <button class="small" type="button" ${ui.page>=pages?'disabled':''} onclick="gotoPage('${c.id}',${ui.page+1})">下一页</button>
+        </div>
+      </div>
+
+      <div class="settings" id="settings-${c.id}" style="${settingsOpen?'':'display:none'}">
+        <h2 style="font-size:14px">客户设置</h2>
+        <div class="settings-grid">
+          <label class="field"><span>家宽出口</span><select id="set-home-${c.id}">${homeOptions}</select></label>
+          <label class="field"><span>设备数上限（0=不限制）</span><input id="set-limit-${c.id}" type="number" min="0" step="1" value="${daysValue(c.device_limit,0)}"></label>
+          <label class="field"><span>默认有效期天数（0=永久）</span><input id="set-days-${c.id}" type="number" min="0" step="1" value="${daysValue(c.default_days,0)}"></label>
+          <label class="field"><span>超限动作</span><select id="set-action-${c.id}">${actionOptions}</select></label>
+          <label class="field"><span>月流量 GB（0=不限制）</span><input id="set-quota-${c.id}" type="number" min="0" step="1" value="${daysValue(c.quota_gb,0)}"></label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="primary" type="button" onclick="saveCustomerSettings('${c.id}')">保存</button>
+          <button type="button" onclick="cancelCustomerSettings('${c.id}')">取消</button>
+        </div>
+        <div class="danger-zone"><button class="danger small" type="button" onclick="delCustomer('${c.id}','${esc(c.name)}')">删除客户</button></div>
+      </div>`;
+    // mark draft tracking on input
+    box.appendChild(div);
+    ['set-home','set-limit','set-days','set-action','set-quota'].forEach(prefix=>{
+      let el=document.getElementById(prefix+'-'+c.id);
+      if(!el) return;
+      el.addEventListener('input',()=>markDraft(c.id));
+      el.addEventListener('change',()=>markDraft(c.id));
+    });
+    if(ui.draft){
+      let d=ui.draft;
+      let h=document.getElementById('set-home-'+c.id); if(h) h.value=d.home_tag;
+      let l=document.getElementById('set-limit-'+c.id); if(l) l.value=daysValue(d.device_limit,0);
+      let dy=document.getElementById('set-days-'+c.id); if(dy) dy.value=daysValue(d.default_days,0);
+      let a=document.getElementById('set-action-'+c.id); if(a) a.value=d.limit_action||'alert';
+      let q=document.getElementById('set-quota-'+c.id); if(q) q.value=daysValue(d.quota_gb,0);
+    }
+  });
+}
+
+function markDraft(cid){
+  let ui=getUi(cid);
+  ui.draft={
+    home_tag:document.getElementById('set-home-'+cid).value,
+    device_limit:document.getElementById('set-limit-'+cid).value,
+    default_days:document.getElementById('set-days-'+cid).value,
+    limit_action:document.getElementById('set-action-'+cid).value,
+    quota_gb:document.getElementById('set-quota-'+cid).value
+  };
+  ui.settingsOpen=true;
+}
+function toggleSettings(cid){let ui=getUi(cid);ui.settingsOpen=!ui.settingsOpen;renderCustomers(lastCustomers,lastDevices,true)}
+function toggleAdd(cid){let ui=getUi(cid);ui.addOpen=!ui.addOpen;renderCustomers(lastCustomers,lastDevices,true)}
+function onSearch(cid,v){let ui=getUi(cid);ui.search=v;ui.page=1;renderCustomers(lastCustomers,lastDevices,true)}
+function onFilter(cid,v){let ui=getUi(cid);ui.filter=v;ui.page=1;renderCustomers(lastCustomers,lastDevices,true)}
+function onSort(cid,v){let ui=getUi(cid);ui.sort=v;ui.page=1;renderCustomers(lastCustomers,lastDevices,true)}
+function gotoPage(cid,p){getUi(cid).page=p;renderCustomers(lastCustomers,lastDevices,true)}
+function toggleMenu(cid,uuid,ev){if(ev)ev.stopPropagation();let ui=getUi(cid);ui.openMenu=(ui.openMenu===uuid?null:uuid);document.querySelectorAll('.menu').forEach(m=>m.classList.remove('open'));if(ui.openMenu){let el=document.querySelector('[data-menu-for="'+uuid+'"]');if(el)el.classList.add('open')}else{/*closed*/}}
+function closeMenus(){for(let cid in uiState) uiState[cid].openMenu=null;document.querySelectorAll('.menu').forEach(m=>m.classList.remove('open'))}
+document.addEventListener('click',(e)=>{if(!e.target.closest('.menu-wrap')) closeMenus()});
+function startRename(cid,uuid){let ui=getUi(cid);ui.renaming=uuid;ui.openMenu=null;renderCustomers(lastCustomers,lastDevices,true);setTimeout(()=>{let el=document.querySelector('[data-renaming="1"]');if(el){el.focus();el.select()}},0)}
+function cancelRename(cid){getUi(cid).renaming=null;renderCustomers(lastCustomers,lastDevices,true)}
+async function commitRename(uuid,name){let d=lastDevices.find(x=>x.uuid===uuid);if(d) getUi(d.customer_id).renaming=null;try{await api('/api/device/set',{uuid:uuid,name:name});await refresh()}catch(e){alert(e.message)}}
+
+function paintBar(el, used, quota){
+  if(!el||!(quota>0)) return;
+  let pct=Math.max(0,Math.min(100,Number(used||0)/quota*100));
+  el.style.width=pct.toFixed(1)+'%';
+  el.className='bar-fill '+barTone(Number(used||0), quota);
+}
+function patchDynamic(rows,devices){
+  rows.forEach(c=>{
+    let root=document.querySelector('.customer[data-customer-id="'+c.id+'"]');
+    if(!root) return;
+    let online=root.querySelector('[data-field="online"]'); if(online) online.textContent=c.online_ip_count;
+    let ips=root.querySelector('[data-field="ips"]'); if(ips) ips.innerHTML=(c.online_ips&&c.online_ips.length)?c.online_ips.map(esc).join('<br>'):'暂无';
+    let cst=customerStatus(c, devices);
+    let badge=root.querySelector('[data-field="cust-status"]'); if(badge){badge.textContent=cst.text;badge.className='pill '+cst.cls}
+    let usedSum=sumUsed(c.id, devices);
+    let quota=quotaBytesOf(c);
+    let qtext=root.querySelector('[data-field="quota-text"]'); if(qtext) qtext.textContent=quotaLabel(usedSum, c.quota_gb);
+    paintBar(root.querySelector('.customer-quota [data-field="quota-bar"]'), usedSum, quota);
+  });
+  devices.forEach(d=>{
+    let card=document.querySelector('.device-card[data-uuid="'+d.uuid+'"]');
+    if(!card) return;
+    let st=deviceStatus(d);
+    card.classList.remove('tone-ok','tone-warn','tone-bad'); card.classList.add('tone-'+st.tone);
+    let status=card.querySelector('[data-field="status"]'); if(status){status.textContent=st.text;status.className='pill '+st.cls}
+    card.querySelectorAll('[data-field="used"]').forEach(el=>{el.textContent=fmtBytes(d.used_bytes)});
+    let up=card.querySelector('[data-field="up"]'); if(up) up.textContent=fmtBytes(d.upload_bytes);
+    let down=card.querySelector('[data-field="down"]'); if(down) down.textContent=fmtBytes(d.download_bytes);
+    let title='上传 '+fmtBytes(d.upload_bytes)+' · 下载 '+fmtBytes(d.download_bytes);
+    card.querySelectorAll('.traffic-text').forEach(el=>{el.title=title});
+    card.querySelectorAll('[data-field="expires"]').forEach(el=>{el.textContent=d.expires_text||'-'});
+    let quota=Number(card.dataset.quota||0);
+    card.querySelectorAll('[data-field="bar"]').forEach(el=>paintBar(el, d.used_bytes, quota));
+  });
+}
+
+async function addCustomer(){try{await api('/api/customer/add',{name:customerName.value,home_tag:customerHome.value,device_limit:customerLimit.value,default_days:customerDays.value,limit_action:customerAction.value,quota_gb:customerQuota.value});customerName.value='';customerLimit.value='';customerDays.value='30';customerQuota.value='';refresh()}catch(e){alert(e.message)}}
+async function saveCustomerSettings(id){try{let payload={id:id,home_tag:document.getElementById('set-home-'+id).value,device_limit:document.getElementById('set-limit-'+id).value,default_days:document.getElementById('set-days-'+id).value,limit_action:document.getElementById('set-action-'+id).value,quota_gb:document.getElementById('set-quota-'+id).value};await api('/api/customer/set',payload);getUi(id).draft=null;refresh()}catch(e){alert(e.message)}}
+function cancelCustomerSettings(id){getUi(id).draft=null;getUi(id).settingsOpen=false;renderCustomers(lastCustomers,lastDevices,true)}
+async function delCustomer(id,name){if(!confirm('确认删除客户「'+(name||id)+'」？客户下还有设备时不能删除。'))return;try{await api('/api/customer/delete',{id:id});delete uiState[id];refresh()}catch(e){alert(e.message)}}
+async function addDeviceToCustomer(cid){try{let el=document.getElementById('newdev-'+cid);let days=document.getElementById('newdays-'+cid);let j=await api('/api/device/add',{name:el.value,customer_id:cid,days:days.value});copy(j.link);el.value='';refresh()}catch(e){alert(e.message)}}
+async function renewDevice(uuid,days){closeMenus();try{await api('/api/device/set',{uuid:uuid,days:days});refresh()}catch(e){alert(e.message)}}
+async function toggleDevice(uuid,en){closeMenus();try{await api('/api/device/set',{uuid:uuid,enabled:en});refresh()}catch(e){alert(e.message)}}
+async function delDevice(uuid,name){closeMenus();if(!confirm('确认删除设备「'+(name||uuid)+'」？'))return;try{await api('/api/device/delete',{uuid:uuid});refresh()}catch(e){alert(e.message)}}
+async function addHome(){try{await api('/api/home/add',{name:homeName.value,server:homeServer.value,server_port:homePort.value,username:homeUser.value,password:homePass.value});homeName.value=homeServer.value=homePort.value=homeUser.value=homePass.value='';refresh()}catch(e){alert(e.message)}}
+async function useHome(tag){try{await api('/api/home/use',{tag:tag});refresh()}catch(e){alert(e.message)}}
+async function testHome(tag){try{let j=await api('/api/home/test',{tag:tag});alert('出口 IP：'+j.ip)}catch(e){alert(e.message)}}
+async function delHome(tag){if(!confirm('删除这个家宽出口？当前出口不能删除。'))return;try{await api('/api/home/delete',{tag:tag});refresh()}catch(e){alert(e.message)}}
+function renderHomes(rows){let tb=document.getElementById('homes');tb.innerHTML='';rows.forEach(h=>{let tr=document.createElement('tr');tr.innerHTML=`<td>${esc(h.name)} ${h.active?'<span class="pill ok">默认</span>':''}</td><td class="mono">${esc(h.server)}:${h.server_port}</td><td>${esc(h.username||'')}</td><td><button onclick="useHome('${h.tag}')">设为默认</button> <button onclick="testHome('${h.tag}')">测试</button> <button class="danger" onclick="delHome('${h.tag}')">删除</button></td>`;tb.appendChild(tr)})}
+async function loadLogs(){try{let j=await api('/api/logs');document.getElementById('logs').textContent=j.logs}catch(e){alert(e.message)}}
+let connFailCount=0, connPolling=false;
+function setConnStatus(text,bad){let el=document.getElementById('connStatus');el.textContent=text;el.className=bad?'bad':'muted'}
+async function loadConnections(showError){if(connPolling)return;connPolling=true;try{let j=await api('/api/connections');connFailCount=0;setConnStatus('已更新 '+new Date().toLocaleTimeString(),false);document.getElementById('connUp').textContent=fmtBytes(j.upload_total);document.getElementById('connDown').textContent=fmtBytes(j.download_total);if(j.device_totals){let m={};j.device_totals.forEach(d=>m[d.uuid]=d);lastDevices=lastDevices.map(d=>Object.assign({},d,m[d.uuid]||{}));renderCustomers(lastCustomers,lastDevices,false)}let tb=document.getElementById('connections');tb.innerHTML='';let rows=j.connections||[];if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="muted">当前没有活跃连接</td></tr>';return}rows.sort((a,b)=>(b.upload+b.download)-(a.upload+a.download));rows.forEach(c=>{let target=(c.host||c.destination_ip||'')+':'+(c.destination_port||'');let source=(c.source_ip||'')+':'+(c.source_port||'');let total=(c.upload||0)+(c.download||0);let tr=document.createElement('tr');tr.innerHTML=`<td class="mono">${esc(c.auth_user||'')}</td><td class="mono">${esc(source)}</td><td class="mono">${esc(target)}</td><td>${fmtBytes(c.upload)}</td><td>${fmtBytes(c.download)}</td><td>${fmtBytes(total)}</td><td class="mono">${esc((c.chains||[]).join(' -> '))}</td>`;tb.appendChild(tr)})}catch(e){connFailCount++;setConnStatus('连接刷新失败，稍后自动重试：'+e.message,true);if(showError)alert(e.message)}finally{connPolling=false}}
+async function restart(){try{await api('/api/restart',{});refresh()}catch(e){alert(e.message)}}
+refresh().then(()=>loadConnections(false)).catch(showLogin)
+setInterval(()=>{if(document.getElementById('app').classList.contains('hidden'))return;let skip=connFailCount>=3&&Date.now()%30000>6000;if(!skip)loadConnections(false)},10000)
+</script>
+</body></html>

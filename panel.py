@@ -1124,7 +1124,8 @@ input,button,select{height:36px;border:1px solid var(--line);border-radius:6px;p
 input,select{min-width:0;width:100%}button{cursor:pointer;white-space:nowrap}button.primary{background:var(--dark);color:#fff;border-color:var(--dark)}button.good{background:var(--accent);color:#fff;border-color:var(--accent)}button.danger{background:#fff;color:var(--danger);border-color:#f1b6b2}button.ghost{background:transparent}button.small{height:30px;padding:0 8px;font-size:12px}button.icon{width:36px;padding:0;flex:0 0 auto}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;border-top:1px solid var(--line);padding:10px 8px;vertical-align:middle}th{color:var(--muted);font-weight:600}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
-.pill{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);gap:4px}.ok{color:#087443}.bad{color:#b42318}.muted{color:var(--muted)}
+.pill{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);gap:4px}.ok{color:#087443}.bad{color:#b42318}.warn{color:#b54708}.muted{color:var(--muted)}
+.pill.ok{color:#087443;background:#ecfdf3;border-color:#abefc6}.pill.bad{color:#b42318;background:#fef3f2;border-color:#f1b6b2}.pill.warn{color:#b54708;background:#fff6ed;border-color:#f9dbaf}
 pre{white-space:pre-wrap;background:#0b1020;color:#d7e0ff;border-radius:8px;padding:12px;max-height:360px;overflow:auto}
 .login{max-width:380px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:8px;padding:22px}.login input{width:100%;margin:10px 0}.hidden{display:none}
 .customer{border:1px solid var(--line);border-radius:12px;padding:14px;margin:0 0 14px;background:#fff}
@@ -1136,13 +1137,18 @@ pre{white-space:pre-wrap;background:#0b1020;color:#d7e0ff;border-radius:8px;padd
 .toolbar{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0}
 .toolbar .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .device-list{display:flex;flex-direction:column;gap:10px}
-.device-card{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fafbfc}
+.device-card{border:1px solid var(--line);border-left-width:3px;border-radius:10px;padding:12px;background:#fafbfc}
+.device-card.tone-ok{border-left-color:#087443}
+.device-card.tone-warn{border-left-color:#f79009}
+.device-card.tone-bad{border-left-color:#b42318}
 .device-top{display:flex;justify-content:space-between;gap:8px;align-items:center}
 .device-name{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.device-compact{display:none}
 .device-stats{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
 .stat{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .stat .label{font-size:12px;color:var(--muted)}.stat .value{font-size:16px;font-weight:700}
 .stat .sub{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.stat .bar{margin-top:6px}
 .uuid-row,.link-row{display:flex;gap:8px;align-items:center;margin-top:8px}
 .uuid-row .mono{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .menu-wrap{position:relative}
@@ -1152,13 +1158,40 @@ pre{white-space:pre-wrap;background:#0b1020;color:#d7e0ff;border-radius:8px;padd
 .settings-grid{display:grid;grid-template-columns:1fr;gap:10px}
 .danger-zone{margin-top:12px;padding-top:12px;border-top:1px dashed #f1b6b2;display:flex;justify-content:flex-end}
 .pager{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
-.add-device{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0;padding:12px;border:1px dashed var(--line);border-radius:10px;background:#fff}
+.add-device-wrap{margin:12px 0}
+.add-toggle{border-style:dashed}
+.add-device{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px;padding:12px;border:1px dashed var(--line);border-radius:10px;background:#fff}
+.customer-quota{margin-top:8px}
+.bar{height:6px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;width:0;border-radius:999px;background:#087443}
+.bar-fill.ok{background:#087443}.bar-fill.warn{background:#f79009}.bar-fill.bad{background:#b42318}
+.customer-quota .bar{height:8px}
 @media(min-width:700px){
   .toolbar{grid-template-columns:2fr 1fr 1fr}
   .toolbar .filters{grid-template-columns:1fr 1fr}
   .device-stats{grid-template-columns:1.2fr 1fr}
   .settings-grid{grid-template-columns:1fr 1fr}
   .add-device{grid-template-columns:1fr 140px auto}
+}
+@media(max-width:699px){
+  .device-list{gap:6px}
+  .device-card{padding:7px 10px;border-radius:8px}
+  .device-top{gap:6px}
+  .device-name{font-size:14px}
+  .device-stats,.uuid-row,.link-row{display:none}
+  .device-compact{display:flex;align-items:center;gap:8px;margin-top:3px;min-width:0}
+  .device-compact .traffic-text{font-size:13px;font-weight:700;white-space:nowrap}
+  .device-compact .bar{flex:1;min-width:40px}
+  .device-compact .expiry{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+  button.icon{width:28px;height:28px}
+  .menu{top:32px}
+  .pill{padding:1px 7px}
+  .customer{padding:10px;margin-bottom:10px}
+  .customer-meta{margin-top:4px;gap:6px}
+  .chip{padding:2px 8px}
+  .toolbar{margin:8px 0}
+  .add-device-wrap{margin:8px 0}
+  section{padding:12px}
 }
 @media(max-width:850px){.grid{grid-template-columns:1fr}header{padding:0 14px}.wrap{padding:0 12px}.row > button{flex:1 1 auto}}
 </style>
@@ -1186,12 +1219,21 @@ function daysValue(v, fallback){return (v===0 || v==='0') ? 0 : (v===null||v===u
 function fmtBytes(n){n=Number(n||0);let u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return (i?n.toFixed(2):n.toFixed(0))+' '+u[i]}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function shortUuid(u){u=String(u||'');return u.length<=12?u:(u.slice(0,8)+'…'+u.slice(-4))}
-function deviceStatus(d){if(d.expired)return {text:'已过期',cls:'bad'};if(d.enabled)return {text:'启用',cls:'ok'};return {text:'停用',cls:'bad'}}
+function quotaBytesOf(c){return Number((c&&c.quota_gb)||0)*1024*1024*1024}
+function sumUsed(cid, devices){return (devices||[]).filter(d=>d.customer_id===cid).reduce((s,d)=>s+Number(d.used_bytes||0),0)}
+function barTone(used, quota){if(!(quota>0))return 'ok';let r=used/quota;if(r>=1)return 'bad';if(r>=0.8)return 'warn';return 'ok'}
+function barHtml(used, quota, field){if(!(quota>0))return '';let pct=Math.max(0,Math.min(100,used/quota*100));let tone=barTone(used,quota);return `<div class="bar"><div class="bar-fill ${tone}" data-field="${field||'bar'}" style="width:${pct.toFixed(1)}%"></div></div>`}
+function quotaLabel(used, quotaGb){if(!(Number(quotaGb)>0))return '月流量 '+fmtBytes(used)+' · 不限制';return '月流量 '+fmtBytes(used)+' / '+String(Number(quotaGb))+' GB'}
+function isExpired(d){let ts=Number(d&&d.expires_at||0);return !!(d&&(d.expired||(ts&&ts*1000<=Date.now())))}
+function isExpiringSoon(d){if(!d||isExpired(d))return false;let ts=Number(d.expires_at||0);if(!ts)return false;let left=ts*1000-Date.now();return left>0&&left<=3*86400000}
+function deviceStatus(d){if(isExpired(d))return {text:'已过期',cls:'bad',tone:'bad'};if(!d.enabled)return {text:'停用',cls:'bad',tone:'bad'};if(isExpiringSoon(d))return {text:'即将到期',cls:'warn',tone:'warn'};return {text:'启用',cls:'ok',tone:'ok'}}
+function customerOverQuota(c, devices){let quota=quotaBytesOf(c);if(!(quota>0))return false;return sumUsed(c.id, devices)>=quota}
+function customerStatus(c, devices){if(c.over_limit||customerOverQuota(c, devices))return {text:'超限',cls:'bad'};let list=(devices||[]).filter(d=>d.customer_id===c.id);if(list.some(isExpired))return {text:'已过期',cls:'bad'};if(list.some(isExpiringSoon))return {text:'即将到期',cls:'warn'};return {text:'正常',cls:'ok'}}
 
 let lastHomes=[], lastCustomers=[], lastDevices=[];
-let uiState={}; // per customer: search,filter,sort,page,settingsOpen,ipsOpen,draft,openMenu
+let uiState={}; // per customer: search,filter,sort,page,settingsOpen,ipsOpen,draft,openMenu,addOpen
 function getUi(cid){
-  if(!uiState[cid]) uiState[cid]={search:'',filter:'all',sort:'default',page:1,settingsOpen:false,ipsOpen:false,draft:null,openMenu:null,renaming:null};
+  if(!uiState[cid]) uiState[cid]={search:'',filter:'all',sort:'default',page:1,settingsOpen:false,ipsOpen:false,draft:null,openMenu:null,renaming:null,addOpen:false};
   return uiState[cid];
 }
 function uiBusy(){
@@ -1227,14 +1269,20 @@ function renderDeviceCard(d){
   let ui=getUi(d.customer_id);
   let menuOpen=ui.openMenu===d.uuid;
   let renaming=ui.renaming===d.uuid;
+  let c=lastCustomers.find(x=>x.id===d.customer_id)||{};
+  let quota=quotaBytesOf(c);
+  let used=Number(d.used_bytes||0);
   let nameHtml=renaming?`<input data-renaming="1" style="max-width:180px" value="${esc(d.name)}" onkeydown="if(event.key==='Enter'){event.preventDefault();commitRename('${d.uuid}',this.value)}else if(event.key==='Escape'){cancelRename('${d.customer_id}')}" onblur="commitRename('${d.uuid}',this.value)">`:`<div class="device-name" title="${esc(d.name)}">${esc(d.name)}</div>`;
-  return `<div class="device-card" data-uuid="${d.uuid}" data-customer="${esc(d.customer_id)}">
+  let trafficTitle='上传 '+fmtBytes(d.upload_bytes)+' · 下载 '+fmtBytes(d.download_bytes);
+  return `<div class="device-card tone-${st.tone}" data-uuid="${d.uuid}" data-customer="${esc(d.customer_id)}" data-quota="${quota}">
     <div class="device-top">
       <div style="min-width:0;flex:1">${nameHtml}</div>
       <span class="pill ${st.cls}" data-field="status">${st.text}</span>
       <div class="menu-wrap">
         <button class="icon" type="button" onclick="toggleMenu('${d.customer_id}','${d.uuid}',event)" aria-label="更多操作">⋯</button>
         <div class="menu ${menuOpen?'open':''}" data-menu-for="${d.uuid}">
+          <button type="button" onclick="closeMenus();copy('${d.link}')">复制链接</button>
+          <button type="button" onclick="closeMenus();copy('${d.uuid}')">复制 UUID</button>
           <button type="button" onclick="startRename('${d.customer_id}','${d.uuid}')">重命名</button>
           <button type="button" onclick="toggleDevice('${d.uuid}',${!d.enabled})">${d.enabled?'停用':'启用'}</button>
           <button type="button" onclick="renewDevice('${d.uuid}',30)">续 1 月</button>
@@ -1243,8 +1291,13 @@ function renderDeviceCard(d){
         </div>
       </div>
     </div>
+    <div class="device-compact">
+      <span class="traffic-text" data-field="used" title="${esc(trafficTitle)}">${fmtBytes(used)}</span>
+      ${barHtml(used, quota, 'bar')}
+      <span class="expiry" data-field="expires">${esc(d.expires_text||'-')}</span>
+    </div>
     <div class="device-stats">
-      <div class="stat"><div class="label">总流量</div><div class="value" data-field="used">${fmtBytes(d.used_bytes)}</div><div class="sub"><span>上传 <b data-field="up">${fmtBytes(d.upload_bytes)}</b></span><span>下载 <b data-field="down">${fmtBytes(d.download_bytes)}</b></span></div></div>
+      <div class="stat"><div class="label">总流量${quota>0?' / 月配额':''}</div><div class="value" data-field="used">${fmtBytes(used)}</div>${barHtml(used, quota, 'bar')}<div class="sub"><span>上传 <b data-field="up">${fmtBytes(d.upload_bytes)}</b></span><span>下载 <b data-field="down">${fmtBytes(d.download_bytes)}</b></span></div></div>
       <div class="stat"><div class="label">到期时间</div><div class="value" style="font-size:14px" data-field="expires">${esc(d.expires_text||'-')}</div></div>
     </div>
     <div class="uuid-row"><span class="mono" title="${d.uuid}">${shortUuid(d.uuid)}</span><button class="small" type="button" onclick="copy('${d.uuid}')">复制 UUID</button></div>
@@ -1272,16 +1325,22 @@ function renderCustomers(rows,devices,force){
     let cards=pageItems.map(renderDeviceCard).join('') || '<div class="muted">暂无设备</div>';
     let settingsOpen=ui.settingsOpen;
     let ipsOpen=ui.ipsOpen;
+    let addOpen=!!ui.addOpen;
+    let cst=customerStatus(c, devices);
+    let usedSum=sumUsed(c.id, devices);
+    let quota=quotaBytesOf(c);
     let div=document.createElement('div');
     div.className='customer';
     div.dataset.customerId=c.id;
     div.innerHTML=`
       <div class="customer-head">
         <div>
-          <div class="customer-title"><b>${esc(c.name)}</b>${c.over_limit?'<span class="pill bad">超限</span>':''}<span class="pill">${all.length} 台设备</span></div>
+          <div class="customer-title"><b>${esc(c.name)}</b><span class="pill ${cst.cls}" data-field="cust-status">${cst.text}</span><span class="pill">${all.length} 台设备</span></div>
           <div class="customer-meta">
             <span class="chip">近 10 分钟在线 IP：<b data-field="online">${c.online_ip_count}</b>/${limitText}</span>
+            <span class="chip" data-field="quota-text">${quotaLabel(usedSum, c.quota_gb)}</span>
           </div>
+          ${quota>0?`<div class="customer-quota" data-quota-bytes="${quota}" data-quota-gb="${Number(c.quota_gb||0)}">${barHtml(usedSum, quota, 'quota-bar')}</div>`:''}
           <details class="details" data-ips ${ipsOpen?'open':''} ontoggle="getUi('${c.id}').ipsOpen=this.open">
             <summary>查看 IP 明细 / 客户详情</summary>
             <div class="muted">客户 ID：<span class="mono">${esc(c.id)}</span></div>
@@ -1291,10 +1350,13 @@ function renderCustomers(rows,devices,force){
         <button class="small" type="button" onclick="toggleSettings('${c.id}')">${settingsOpen?'收起设置':'客户设置'}</button>
       </div>
 
-      <div class="add-device">
-        <input id="newdev-${c.id}" placeholder="给 ${esc(c.name)} 添加设备">
-        <label class="field" style="min-width:0"><span>有效期（天，0=永久）</span><input id="newdays-${c.id}" type="number" min="0" step="1" value="${daysValue(c.default_days,30)}"></label>
-        <button class="primary" onclick="addDeviceToCustomer('${c.id}')">添加设备</button>
+      <div class="add-device-wrap">
+        <button class="small add-toggle" type="button" onclick="toggleAdd('${c.id}')">${addOpen?'收起':'+ 添加设备'}</button>
+        <div class="add-device" id="add-${c.id}" style="${addOpen?'':'display:none'}">
+          <input id="newdev-${c.id}" placeholder="给 ${esc(c.name)} 添加设备">
+          <label class="field" style="min-width:0"><span>有效期（天，0=永久）</span><input id="newdays-${c.id}" type="number" min="0" step="1" value="${daysValue(c.default_days,30)}"></label>
+          <button class="primary" onclick="addDeviceToCustomer('${c.id}')">添加设备</button>
+        </div>
       </div>
 
       <div class="toolbar">
@@ -1368,6 +1430,7 @@ function markDraft(cid){
   ui.settingsOpen=true;
 }
 function toggleSettings(cid){let ui=getUi(cid);ui.settingsOpen=!ui.settingsOpen;renderCustomers(lastCustomers,lastDevices,true)}
+function toggleAdd(cid){let ui=getUi(cid);ui.addOpen=!ui.addOpen;renderCustomers(lastCustomers,lastDevices,true)}
 function onSearch(cid,v){let ui=getUi(cid);ui.search=v;ui.page=1;renderCustomers(lastCustomers,lastDevices,true)}
 function onFilter(cid,v){let ui=getUi(cid);ui.filter=v;ui.page=1;renderCustomers(lastCustomers,lastDevices,true)}
 function onSort(cid,v){let ui=getUi(cid);ui.sort=v;ui.page=1;renderCustomers(lastCustomers,lastDevices,true)}
@@ -1379,22 +1442,39 @@ function startRename(cid,uuid){let ui=getUi(cid);ui.renaming=uuid;ui.openMenu=nu
 function cancelRename(cid){getUi(cid).renaming=null;renderCustomers(lastCustomers,lastDevices,true)}
 async function commitRename(uuid,name){let d=lastDevices.find(x=>x.uuid===uuid);if(d) getUi(d.customer_id).renaming=null;try{await api('/api/device/set',{uuid:uuid,name:name});await refresh()}catch(e){alert(e.message)}}
 
+function paintBar(el, used, quota){
+  if(!el||!(quota>0)) return;
+  let pct=Math.max(0,Math.min(100,Number(used||0)/quota*100));
+  el.style.width=pct.toFixed(1)+'%';
+  el.className='bar-fill '+barTone(Number(used||0), quota);
+}
 function patchDynamic(rows,devices){
   rows.forEach(c=>{
     let root=document.querySelector('.customer[data-customer-id="'+c.id+'"]');
     if(!root) return;
     let online=root.querySelector('[data-field="online"]'); if(online) online.textContent=c.online_ip_count;
     let ips=root.querySelector('[data-field="ips"]'); if(ips) ips.innerHTML=(c.online_ips&&c.online_ips.length)?c.online_ips.map(esc).join('<br>'):'暂无';
+    let cst=customerStatus(c, devices);
+    let badge=root.querySelector('[data-field="cust-status"]'); if(badge){badge.textContent=cst.text;badge.className='pill '+cst.cls}
+    let usedSum=sumUsed(c.id, devices);
+    let quota=quotaBytesOf(c);
+    let qtext=root.querySelector('[data-field="quota-text"]'); if(qtext) qtext.textContent=quotaLabel(usedSum, c.quota_gb);
+    paintBar(root.querySelector('.customer-quota [data-field="quota-bar"]'), usedSum, quota);
   });
   devices.forEach(d=>{
     let card=document.querySelector('.device-card[data-uuid="'+d.uuid+'"]');
     if(!card) return;
     let st=deviceStatus(d);
+    card.classList.remove('tone-ok','tone-warn','tone-bad'); card.classList.add('tone-'+st.tone);
     let status=card.querySelector('[data-field="status"]'); if(status){status.textContent=st.text;status.className='pill '+st.cls}
-    let used=card.querySelector('[data-field="used"]'); if(used) used.textContent=fmtBytes(d.used_bytes);
+    card.querySelectorAll('[data-field="used"]').forEach(el=>{el.textContent=fmtBytes(d.used_bytes)});
     let up=card.querySelector('[data-field="up"]'); if(up) up.textContent=fmtBytes(d.upload_bytes);
     let down=card.querySelector('[data-field="down"]'); if(down) down.textContent=fmtBytes(d.download_bytes);
-    let exp=card.querySelector('[data-field="expires"]'); if(exp) exp.textContent=d.expires_text||'-';
+    let title='上传 '+fmtBytes(d.upload_bytes)+' · 下载 '+fmtBytes(d.download_bytes);
+    card.querySelectorAll('.traffic-text').forEach(el=>{el.title=title});
+    card.querySelectorAll('[data-field="expires"]').forEach(el=>{el.textContent=d.expires_text||'-'});
+    let quota=Number(card.dataset.quota||0);
+    card.querySelectorAll('[data-field="bar"]').forEach(el=>paintBar(el, d.used_bytes, quota));
   });
 }
 
